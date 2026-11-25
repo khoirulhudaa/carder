@@ -1,0 +1,110 @@
+/* ===== Efek kartu: foil, holo, glitter, tilt ===== */
+
+.card3d .card-inner {
+  transition: transform 0.18s ease-out;
+  transform-style: preserve-3d;
+}
+.card3d:hover .card-inner {
+  transform: perspective(40em) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg));
+}
+
+/* ---------- bingkai foil (gradient bergerak) ---------- */
+.frame-anim {
+  background-size: 300% 300%;
+  animation: foilMove 7s ease-in-out infinite;
+}
+.frame-rainbow { background-image: linear-gradient(120deg, #ff5f6d, #ffc371, #f9f871, #6dffb3, #5fd3ff, #b57bff, #ff5f6d); }
+.frame-holo    { background-image: linear-gradient(120deg, #c9d6ff, #f6d5ff, #ffe9c9, #c9fff1, #c9d6ff); }
+.frame-gold    { background-image: linear-gradient(120deg, #7a5200, #ffd86b, #fff4b8, #e0a200, #7a5200, #ffd86b); }
+.frame-aurora  { background-image: linear-gradient(120deg, #00ffa3, #03e1ff, #8a5cff, #ff5cf0, #00ffa3); }
+.frame-cosmic  { background-image: linear-gradient(120deg, #1b0b4d, #6a2cff, #ff4fd8, #2cd8ff, #1b0b4d); }
+.frame-ember   { background-image: linear-gradient(120deg, #7a0900, #ff3d00, #ffb300, #fff1a8, #ff3d00, #7a0900); }
+.frame-frost   { background-image: linear-gradient(120deg, #0a4fff, #6fe3ff, #ffffff, #6fe3ff, #0a4fff); }
+.frame-emerald { background-image: linear-gradient(120deg, #00562b, #25e07a, #e6ffb0, #25e07a, #00562b); }
+
+/* ---------- lapisan kilau (sheen) ---------- */
+.foil-sheen {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.26;
+  background-size: 300% 300%;
+  animation: foilMove 6s ease-in-out infinite;
+}
+.card3d:hover .foil-sheen {
+  animation: none;
+  background-position: var(--mx, 50%) var(--my, 50%);
+  opacity: 0.5;
+}
+.sheen-rainbow, .sheen-holo, .sheen-aurora, .sheen-cosmic {
+  background-image: linear-gradient(115deg, transparent 18%, #ff6b9d 30%, #ffd36b 40%, #7dffb0 50%, #6bd0ff 60%, #b58cff 70%, transparent 82%);
+}
+.sheen-gold  { background-image: linear-gradient(115deg, transparent 20%, #ffd54a 40%, #fff7c2 50%, #ffb300 60%, transparent 80%); }
+.sheen-ember { background-image: linear-gradient(115deg, transparent 20%, #ff6a00 40%, #ffe27a 50%, #ff3d00 60%, transparent 80%); }
+.sheen-frost { background-image: linear-gradient(115deg, transparent 20%, #6fe3ff 40%, #ffffff 50%, #7aa8ff 60%, transparent 80%); }
+.sheen-emerald { background-image: linear-gradient(115deg, transparent 20%, #3dff9b 40%, #f4ffc2 50%, #00c46a 60%, transparent 80%); }
+
+/* ---------- glitter / bintang berkelip ---------- */
+.foil-glitter {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  background-image:
+    radial-gradient(circle at 12% 22%, #fff 0 0.05em, transparent 0.16em),
+    radial-gradient(circle at 78% 14%, #fff 0 0.05em, transparent 0.16em),
+    radial-gradient(circle at 36% 60%, #fff 0 0.04em, transparent 0.14em),
+    radial-gradient(circle at 88% 52%, #fff 0 0.05em, transparent 0.16em),
+    radial-gradient(circle at 22% 86%, #fff 0 0.05em, transparent 0.16em),
+    radial-gradient(circle at 64% 80%, #fff 0 0.04em, transparent 0.14em),
+    radial-gradient(circle at 52% 30%, #fff 0 0.04em, transparent 0.14em);
+  animation: twinkle 2.6s ease-in-out infinite;
+}
+
+/* kartu Legendary tanpa foil khusus */
+.holo-soft::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  mix-blend-mode: screen;
+  opacity: 0.16;
+  background: linear-gradient(115deg, transparent 25%, #ffd36b 42%, #7dffb0 52%, #6bd0ff 62%, transparent 78%);
+  background-size: 300% 300%;
+  animation: foilMove 7s ease-in-out infinite;
+}
+
+/* ---------- pita GX / EX ---------- */
+.tag-band {
+  background: linear-gradient(90deg, #05060d, #15182b 50%, #05060d);
+  clip-path: polygon(3% 0, 100% 0, 97% 100%, 0 100%);
+}
+.tag-chip {
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  background-size: 300% 300%;
+  animation: foilMove 5s linear infinite;
+}
+
+/* ---------- animasi seni kartu ---------- */
+.art-float { animation: artFloat 3.4s ease-in-out infinite; }
+.art-spin { transform-box: fill-box; transform-origin: center; animation: artSpin 24s linear infinite; }
+.art-spin-rev { transform-box: fill-box; transform-origin: center; animation: artSpin 36s linear infinite reverse; }
+.art-pulse { animation: artPulse 2.8s ease-in-out infinite; }
+
+@keyframes foilMove { 0% { background-position: 0% 50%; } 50% { background-position: 100% 50%; } 100% { background-position: 0% 50%; } }
+@keyframes twinkle { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.95; } }
+@keyframes artFloat { 0%, 100% { transform: translateY(0.04em); } 50% { transform: translateY(-0.1em); } }
+@keyframes artSpin { to { transform: rotate(360deg); } }
+@keyframes artPulse { 0%, 100% { opacity: 0.55; } 50% { opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .frame-anim, .foil-sheen, .foil-glitter, .holo-soft::after, .tag-chip, .art-float, .art-spin, .art-spin-rev, .art-pulse { animation: none; }
+}

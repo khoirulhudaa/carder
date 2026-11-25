@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+  --font-ui: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --bg: #08090d;
+  --surface: #0f1218;
+  --surface-2: #151a23;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.16);
+  --accent: #818cf8;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(900px 480px at 50% -12%, rgba(99, 102, 241, 0.13), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+  color: #e6e8ee;
+  font-family: var(--font-ui);
+  font-feature-settings: 'tnum', 'cv11';
+  -webkit-font-smoothing: antialiased;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-medium tracking-tight text-slate-100 transition hover:border-white/25 hover:bg-white/[0.09] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 active:scale-[.98] disabled:pointer-events-none disabled:opacity-40;
+  }
+  .btn-primary {
+    @apply border-transparent bg-indigo-400 font-semibold text-slate-950 hover:bg-indigo-300;
+  }
+  .btn-danger {
+    @apply border-rose-400/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20;
+  }
+  .btn-sm {
+    @apply px-3 py-1.5 text-xs;
+  }
+  .panel {
+    @apply rounded-xl border border-white/[0.08] bg-[#0f1218]/90;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-white/25 hover:text-white;
+  }
+  .chip-on {
+    @apply border-indigo-300/60 bg-indigo-400/15 text-indigo-100;
+  }
+  .eyebrow {
+    @apply text-xs font-medium tracking-wide text-slate-500;
+  }
+}
+
+/* ---------- bobot huruf lebih ringan: tampilan lebih modern ---------- */
+.font-extrabold { font-weight: 650; }
+.font-black { font-weight: 700; }
+.font-display { letter-spacing: -0.015em; }
+
+/* ---------- efek aksi di papan ---------- */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-4px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-2px); }
+  80% { transform: translateX(2px); }
+}
+@keyframes holo {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 200% 200%; }
+}
+@keyframes popIn {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.fx-dmg { animation: shake 0.4s; box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.9), 0 0 14px rgba(248, 113, 113, 0.5) !important; }
+.fx-heal { box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.9), 0 0 14px rgba(74, 222, 128, 0.45) !important; }
+.fx-buff { box-shadow: 0 0 0 1px rgba(165, 180, 252, 0.9), 0 0 14px rgba(129, 140, 248, 0.5) !important; }
+.fx-summon { animation: popIn 0.3s ease-out; }
+
+.holo::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.25) 40%, rgba(255, 190, 255, 0.18) 50%, rgba(160, 230, 255, 0.18) 58%, transparent 70%);
+  background-size: 250% 250%;
+  mix-blend-mode: overlay;
+  animation: holo 3.5s linear infinite;
+}
+
+/* ---------- ukuran adaptif layar duel ----------
+   --u = 1em kartu/ubin. Dihitung agar 2 baris monster + tangan selalu muat di tinggi layar
+   dan 3 ubin muat di lebar layar. */
+.duel-main {
+  --u: clamp(7px, min(calc((100dvh - 300px) / 35), calc((100vw - 56px) / 28)), 18px);
+}
+@media (min-width: 1024px) {
+  .duel-main {
+    --u: clamp(7px, min(calc((100dvh - 300px) / 35), calc((100vw - 400px) / 28)), 18px);
+  }
+}
+.u-size { font-size: var(--u, 12px); }
+
+.no-select {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}

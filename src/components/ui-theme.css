@@ -1,0 +1,60 @@
+/* ===== Tema UI global: modern, minimalis ===== */
+:root {
+  --bg: #090b10;
+  --surface: #0f1219;
+  --surface-2: #151925;
+  --line: rgba(255, 255, 255, 0.09);
+  --line-strong: rgba(255, 255, 255, 0.18);
+  --text: #e8eaf0;
+  --muted: #8b93a7;
+  --accent: #818cf8;      /* satu-satunya warna aksen UI */
+  --good: #4ade80;
+  --bad: #f87171;
+  --radius: 12px;
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+html, body, #root { height: 100%; }
+body {
+  margin: 0;
+  background: radial-gradient(1200px 600px at 50% -10%, #151a2b, var(--bg) 60%);
+  color: var(--text);
+  font-family: var(--font-ui);
+  font-feature-settings: 'tnum';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* panel & kontrol */
+.ui-panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+.ui-panel-2 { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); }
+
+.ui-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+  padding: .55rem 1rem; border-radius: 10px;
+  background: var(--surface-2); color: var(--text);
+  border: 1px solid var(--line-strong);
+  font-weight: 500; font-size: .875rem; letter-spacing: -.005em;
+  transition: background .15s, border-color .15s, transform .1s;
+}
+.ui-btn:hover { background: #1b2030; border-color: rgba(255,255,255,.3); }
+.ui-btn:active { transform: translateY(1px); }
+.ui-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.ui-btn:disabled { opacity: .4; pointer-events: none; }
+.ui-btn-primary { background: var(--accent); border-color: transparent; color: #0b0d17; font-weight: 600; }
+.ui-btn-primary:hover { background: #9aa3fa; }
+
+.ui-chip {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .15rem .55rem; border-radius: 999px;
+  border: 1px solid var(--line-strong); color: var(--muted); font-size: .75rem;
+}
+
+.ui-title { font-weight: 600; letter-spacing: -.02em; color: #fff; }
+.ui-muted { color: var(--muted); }
+
+/* bar HP / mana tipis */
+.ui-bar { height: 4px; border-radius: 99px; background: rgba(255,255,255,.1); overflow: hidden; }
+.ui-bar > i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width .3s; }
+
+/* scrollbar halus */
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.18) transparent; }
