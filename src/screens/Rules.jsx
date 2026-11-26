@@ -14,7 +14,7 @@ export default function Rules({ onBack }) {
   return (
     <div className="flex h-[100dvh] flex-col">
       <Header title="Cara Main" onBack={onBack} />
-      <div className="mx-auto w-full max-w-3xl flex-1 space-y-4 overflow-y-auto p-4 pb-10">
+      <div className="mx-auto w-full max-w-8xl flex-1 space-y-4 overflow-y-auto p-4 pb-10">
         <Section title="🎯 Tujuan">
           <p>
             Turunkan LP lawan dari <b>{START_LP}</b> sampai 0. Kamu juga menang jika lawan tak bisa menarik kartu (deck habis). Kamu kalah jika LP-mu 0.

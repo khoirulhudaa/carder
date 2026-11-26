@@ -109,13 +109,17 @@ export default function Card({ id, size = 'md', selected, dim, glow, onClick, co
       onClick={onClick}
       onMouseMove={handleMove}
       className={clsx(
-        'card3d relative shrink-0 select-none transition-transform duration-150',
+        'card3d relative w-full shrink-0 select-none transition-transform duration-150',
         SIZE[size],
         onClick && 'cursor-pointer',
         dim && 'brightness-[.55] saturate-50',
         className,
       )}
       style={{ width: '10em', height: '14em', ...FONT }}
+      
+      // size card for mobile device
+      // style={{ width: '100%', height: '16.5em', ...FONT }}
+
     >
       <div
         className={clsx('card-inner absolute inset-0 rounded-[0.6em] p-[0.08em]', foil && `frame-anim frame-${foil}`, trainer && 'trainer-frame')}

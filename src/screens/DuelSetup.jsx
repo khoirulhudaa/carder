@@ -33,7 +33,7 @@ export default function DuelSetup({ onBack, onStart }) {
   return (
     <div className="flex h-[100dvh] flex-col">
       <Header title="Siapkan Duel" onBack={onBack} />
-      <div className="mx-auto w-full max-w-4xl flex-1 space-y-8 overflow-y-auto p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-8xl flex-1 space-y-8 overflow-y-auto p-4 sm:p-6">
         <section>
           <h2 className="eyebrow mb-3">1 · Deck</h2>
           <div className="flex flex-wrap gap-2">

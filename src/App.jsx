@@ -10,6 +10,8 @@ import Collection from './screens/Collection.jsx';
 import Shop from './screens/Shop.jsx';
 import Rules from './screens/Rules.jsx';
 import { buildEnemyDeck } from './data/opponents.js';
+import Fusion from './screens/Fushion.jsx';
+import Gacha from './screens/Gacha.jsx';
 
 export default function App() {
   const started = useStore((s) => s.started);
@@ -46,6 +48,10 @@ export default function App() {
       return <Shop onBack={back} />;
     case 'rules':
       return <Rules onBack={back} />;
+    case 'gacha':
+      return <Gacha onBack={back} />;
+    case 'fusion':
+      return <Fusion onBack={back} />;
     default:
       return <Menu go={setScreen} />;
   }

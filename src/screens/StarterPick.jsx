@@ -11,7 +11,7 @@ export default function StarterPick() {
   const chosen = ELEMENT_LIST.find((e) => e.id === pick);
 
   return (
-    <div className="mx-auto flex min-h-[100dvh] max-w-3xl flex-col items-center justify-center gap-6 px-4 py-8 text-center">
+    <div className="mx-auto flex min-h-[100dvh] max-w-8xl flex-col items-center justify-center gap-6 px-4 py-8 text-center">
       <div>
         <h1 className="bg-gradient-to-r from-orange-300 via-fuchsia-300 to-sky-300 bg-clip-text font-display text-4xl font-extrabold text-transparent sm:text-5xl">
           ELEMENTRA

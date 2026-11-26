@@ -258,6 +258,23 @@ function PrizePile({ cards, pending, mine, onTake }) {
 // Skala tile mengikuti tinggi layar supaya 2 baris monster + bar + tangan selalu muat
 // tanpa scroll. Kalau --u sudah kamu atur di CSS, hapus properti style pada <main>.
 const BOARD_UNIT = 'clamp(5px, calc((100dvh - 300px) / 23), min(11px, 1.6vw))';
+// Mobile: tangan disimpan di bottom sheet, jadi ruang vertikal lebih lega dan tile bisa lebih besar.
+// Dibatasi tinggi layar dan lebar layar (3 tile + tumpukan hadiah + jarak harus muat).
+const BOARD_UNIT_MOBILE = 'clamp(5px, min(calc((100dvh - 250px) / 23), calc((100vw - 100px) / 27)), 12px)';
+
+// true kalau layar < 1024px (di bawah breakpoint `lg`)
+function useIsMobile() {
+  const query = '(max-width: 1023px)';
+  const [m, setM] = useState(() => typeof matchMedia !== 'undefined' && matchMedia(query).matches);
+  useEffect(() => {
+    const mq = matchMedia(query);
+    const on = () => setM(mq.matches);
+    on();
+    mq.addEventListener('change', on);
+    return () => mq.removeEventListener('change', on);
+  }, []);
+  return m;
+}
 
 export default function Duel({ config, onExit, onRematch }) {
   const [init] = useState(() =>
@@ -294,11 +311,15 @@ export default function Duel({ config, onExit, onRematch }) {
   const idRef = useRef(0);
   const [cutIns, setCutIns] = useState([]);
   const cutRef = useRef(0);
+  const isMobile = useIsMobile();
+  const mobileRef = useRef(isMobile);
+  mobileRef.current = isMobile;
+  const [showHand, setShowHand] = useState(false); // bottom sheet daftar kartu (mobile)
 
   /* ---------- efek visual ---------- */
   // karakter kartu muncul dari pinggir layar (maks. 2 sekaligus)
   const pushCut = useCallback((item) => {
-    if (!item.cardId) return;
+    if (!item.cardId || mobileRef.current) return;
     if (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
     const id = ++cutRef.current;
     setCutIns((l) => [...l.slice(-1), { ...item, id }]);
@@ -633,6 +654,7 @@ export default function Duel({ config, onExit, onRematch }) {
     return null;
   }
 
+  const playable = myTurn ? me.hand.filter((c) => canPlayCard(g, 'player', c.uid).ok).length : 0;
   const lines = shownId ? describeCard(CARDS[shownId]) : [];
 
   /* ---------- tampilan ---------- */
@@ -696,7 +718,7 @@ export default function Duel({ config, onExit, onRematch }) {
       {/* papan */}
       <main
         className="duel-main flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-hidden px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] sm:px-4 sm:pt-2"
-        style={{ '--u': BOARD_UNIT }}
+        style={{ '--u': isMobile ? BOARD_UNIT_MOBILE : BOARD_UNIT }}
       >
         <PlayerBar g={g} side="enemy" floats={floats.filter((f) => f.key === 'enemy:lp')} flash={flash['enemy:lp']} active={g.active === 'enemy' && !g.winner} />
         <Strip g={g} side="enemy" onInspect={inspect} />
@@ -742,7 +764,7 @@ export default function Duel({ config, onExit, onRematch }) {
         <PlayerBar g={g} side="player" floats={floats.filter((f) => f.key === 'player:lp')} flash={flash['player:lp']} active={myTurn} />
 
         {/* tangan: tombol panah kiri/kanan, tanpa scroll */}
-        <div ref={handBox} className="flex shrink-0 items-center justify-center gap-1 pb-1 pt-3">
+        <div ref={handBox} className="hidden shrink-0 items-center justify-center gap-1 pb-1 pt-3 lg:flex">
           <button
             className="btn btn-sm !h-9 !w-9 shrink-0 !p-0 disabled:opacity-20"
             disabled={page <= 0}
@@ -785,6 +807,17 @@ export default function Duel({ config, onExit, onRematch }) {
             aria-label="Kartu berikutnya"
           >
             <ChevronRight size={18} />
+          </button>
+        </div>
+
+        {/* tangan (mobile): tombol pembuka bottom sheet */}
+        <div className="shrink-0 pb-1 pt-1 lg:hidden">
+          <button className="btn w-full !py-3 text-sm" onClick={() => { sfx.click(); setShowHand(true); }}>
+            <Hand size={16} /> Lihat kartu
+            <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs tabular-nums">{me.hand.length}</span>
+            {playable > 0 && (
+              <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">{playable} bisa dimainkan</span>
+            )}
           </button>
         </div>
       </main>
@@ -835,6 +868,58 @@ export default function Duel({ config, onExit, onRematch }) {
         )}
       </AnimatePresence>
 
+      {/* daftar kartu tangan (mobile): muncul dari bawah layar */}
+      <AnimatePresence>
+        {isMobile && showHand && !g.winner && (
+          <motion.div
+            key="hand-bg"
+            className="fixed inset-0 z-[34] bg-black/60 lg:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowHand(false)}
+          />
+        )}
+        {isMobile && showHand && !g.winner && (
+          <motion.div
+            key="hand-sheet"
+            className="fixed inset-x-0 bottom-0 z-[35] flex max-h-[78dvh] flex-col rounded-t-2xl border-t border-white/10 bg-[#0a0c11]/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl backdrop-blur lg:hidden"
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+          >
+            <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-white/20" />
+            <div className="flex shrink-0 items-center justify-between px-4 py-2">
+              <div>
+                <p className="text-sm font-semibold">Tangan <span className="font-normal text-slate-500">· {me.hand.length} kartu</span></p>
+                <p className="text-[11px] text-slate-500">Ketuk kartu untuk melihat aksi</p>
+              </div>
+              <button className="btn btn-sm !p-1.5" onClick={() => setShowHand(false)} aria-label="Tutup"><X size={14} /></button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
+              <div className="grid grid-cols-2 justify-center gap-2.5 pt-1">
+                {me.hand.map((c) => {
+                  const ok = myTurn && canPlayCard(g, 'player', c.uid).ok;
+                  const on = sel?.kind === 'hand' && sel.uid === c.uid;
+                  return (
+                    <Card
+                      key={c.uid}
+                      id={c.id}
+                      size="md"
+                      selected={on}
+                      dim={!ok}
+                      onClick={() => { sfx.click(); setMode(null); setSel({ kind: 'hand', uid: c.uid }); setShowHand(false); }}
+                    />
+                  );
+                })}
+                {me.hand.length === 0 && <p className="px-6 py-10 text-sm text-slate-500">Tanganmu kosong</p>}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* log mobile */}
       <AnimatePresence>
         {showLog && (
@@ -861,7 +946,15 @@ export default function Duel({ config, onExit, onRematch }) {
             exit={{ opacity: 0, scale: 1.1 }}
             transition={{ duration: 0.25 }}
           >
-            {banner.cardId ? (
+            {banner.cardId && isMobile ? (
+              <div className="flex max-w-[92vw] items-center gap-2 rounded-full border border-white/15 bg-[#0a0c11]/90 px-4 py-2 text-xs shadow-2xl backdrop-blur">
+                <span className="shrink-0 text-base leading-none">{CARDS[banner.cardId]?.icon}</span>
+                <span className="shrink-0 text-slate-300">
+                  {banner.trap ? 'Jebakan aktif' : banner.side === 'player' ? 'Kamu memainkan' : `${g.names.enemy} memainkan`}
+                </span>
+                <b className="truncate text-white">{CARDS[banner.cardId]?.name}</b>
+              </div>
+            ) : banner.cardId ? (
               <div className="flex flex-col items-center gap-2">
                 <span className="rounded-full bg-black/70 px-3 py-1 text-xs font-bold">
                   {banner.trap ? 'Jebakan aktif · ' : banner.side === 'player' ? 'Kamu memainkan' : `${g.names.enemy} memainkan`}
