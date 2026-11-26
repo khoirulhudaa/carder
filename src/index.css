@@ -111,9 +111,15 @@ body {
 }
 @media (min-width: 1024px) {
   .duel-main {
-    --u: clamp(7px, min(calc((100dvh - 300px) / 35), calc((100vw - 400px) / 28)), 18px);
+    --u: clamp(7px, min(calc((100dvh - 290px) / 33), calc((100vw - 630px) / 28)), 22px);
   }
 }
+@media (min-width: 1280px) {
+  .duel-main {
+    --u: clamp(7px, min(calc((100dvh - 290px) / 33), calc((100vw - 700px) / 28)), 22px);
+  }
+}
+
 .u-size { font-size: var(--u, 12px); }
 
 .no-select {

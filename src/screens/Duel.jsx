@@ -1,8 +1,9 @@
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Flag, Hand, Layers, ScrollText, Swords, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Flag, Hand, Layers, ScrollText, Swords, X } from 'lucide-react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Card from '../components/Card.jsx';
+import CutIns from '../components/CutIn.jsx';
 import DuelLog from '../components/duelLog.jsx';
 import MonsterTile, { Floats, TILE_SIZE } from '../components/MonsterTile.jsx';
 import { CARDS } from '../data/cards.js';
@@ -10,7 +11,7 @@ import { describeCard } from '../data/describe.js';
 import { KEYWORDS } from '../data/effects.js';
 import { ELEMENTS } from '../data/elements.js';
 import { chooseAction } from '../engine/ai.js';
-import { MAX_MANA, START_LP, TYPE_NAMES } from '../engine/constants.js';
+import { MAX_MANA, RARITY, START_LP, TYPE_NAMES } from '../engine/constants.js';
 import {
   attackTargets,
   canAttack,
@@ -21,6 +22,7 @@ import {
 } from '../engine/engine.js';
 import { explainAction, startEntries } from '../lib/explain.js';
 import { sfx } from '../lib/sfx.js';
+import { sfxx } from '../lib/sfxfx.js';
 import { makeFxRunner } from '../lib/vfx.js';
 import { useStore } from '../store/useStore.js';
 
@@ -39,36 +41,35 @@ function PlayerBar({ g, side, floats, flash, active }) {
         flash && `fx-${flash}`,
       )}
     >
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-xl">{g.avatars[side]}</div>
       <div className="min-w-0 flex-1">
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="truncate text-xs font-semibold sm:text-sm">{g.names[side]}</span>
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+          <span className="min-w-0 truncate text-xs font-semibold sm:text-sm">{g.names[side]}</span>
+          <div className="ml-auto flex items-center gap-2.5 text-[10px] text-slate-300 sm:text-xs">
+            <span className="flex items-center gap-[2px]" title="Energi">
+              {Array.from({ length: MAX_MANA }).map((_, i) => (
+                <span
+                  key={i}
+                  className={clsx(
+                    'h-2 w-2 rounded-full border sm:h-2.5 sm:w-2.5',
+                    i < p.mana ? 'border-indigo-300 bg-indigo-400' : i < p.maxMana ? 'border-indigo-400/60 bg-transparent' : 'border-white/10 bg-white/5',
+                  )}
+                />
+              ))}
+              <b className="ml-1 tabular-nums">{p.mana}/{p.maxMana}</b>
+            </span>
+            <span className="flex items-center gap-1" title="Deck">
+              <Layers size={11} /> {p.deck.length}
+            </span>
+            <span className="flex items-center gap-1" title="Tangan">
+              <Hand size={11} /> {p.hand.length}
+            </span>
+          </div>
           <span className="font-display text-sm font-extrabold tabular-nums sm:text-base">
             {p.lp} <span className="text-[10px] font-normal text-slate-400">LP</span>
           </span>
         </div>
-        <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
           <motion.div className="h-full bg-rose-400/90" animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }} />
-        </div>
-        <div className="mt-1 flex items-center gap-2 text-[10px] text-slate-300 sm:text-xs">
-          <span className="flex items-center gap-[2px]" title="Energi">
-            {Array.from({ length: MAX_MANA }).map((_, i) => (
-              <span
-                key={i}
-                className={clsx(
-                  'h-2 w-2 rounded-full border sm:h-2.5 sm:w-2.5',
-                  i < p.mana ? 'border-indigo-300 bg-indigo-400' : i < p.maxMana ? 'border-indigo-400/60 bg-transparent' : 'border-white/10 bg-white/5',
-                )}
-              />
-            ))}
-            <b className="ml-1 tabular-nums">{p.mana}/{p.maxMana}</b>
-          </span>
-          <span className="ml-auto flex items-center gap-1" title="Deck">
-            <Layers size={11} /> {p.deck.length}
-          </span>
-          <span className="flex items-center gap-1" title="Tangan">
-            <Hand size={11} /> {p.hand.length}
-          </span>
         </div>
       </div>
       <Floats items={floats} />
@@ -161,12 +162,12 @@ function InstanceInfo({ g, side, slot }) {
   );
 }
 
-function Btn({ children, onClick, primary, danger, disabled }) {
+function Btn({ children, onClick, primary, danger, disabled, className }) {
   return (
     <button
       disabled={disabled}
       onClick={onClick}
-      className={clsx('btn w-full', primary && 'btn-primary', danger && 'btn-danger')}
+      className={clsx('btn w-full !px-2 text-center text-[13px] leading-tight', primary && 'btn-primary', danger && 'btn-danger', className)}
     >
       {children}
     </button>
@@ -254,6 +255,10 @@ function PrizePile({ cards, pending, mine, onTake }) {
 /* ------------------------------------------------------------------ */
 /*  Layar duel                                                        */
 /* ------------------------------------------------------------------ */
+// Skala tile mengikuti tinggi layar supaya 2 baris monster + bar + tangan selalu muat
+// tanpa scroll. Kalau --u sudah kamu atur di CSS, hapus properti style pada <main>.
+const BOARD_UNIT = 'clamp(5px, calc((100dvh - 300px) / 23), min(11px, 1.6vw))';
+
 export default function Duel({ config, onExit, onRematch }) {
   const [init] = useState(() =>
     setupPrizes(
@@ -287,8 +292,18 @@ export default function Duel({ config, onExit, onRematch }) {
   const doneRef = useRef(false);
   const logRef = useRef(null);
   const idRef = useRef(0);
+  const [cutIns, setCutIns] = useState([]);
+  const cutRef = useRef(0);
 
   /* ---------- efek visual ---------- */
+  // karakter kartu muncul dari pinggir layar (maks. 2 sekaligus)
+  const pushCut = useCallback((item) => {
+    if (!item.cardId) return;
+    if (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const id = ++cutRef.current;
+    setCutIns((l) => [...l.slice(-1), { ...item, id }]);
+    setTimeout(() => setCutIns((l) => l.filter((x) => x.id !== id)), item.kind === 'big' ? 1300 : 850);
+  }, []);
   const addFloat = useCallback((key, text, color) => {
     const id = ++idRef.current;
     setFloats((f) => [...f, { id, key, text, color }]);
@@ -302,6 +317,7 @@ export default function Duel({ config, onExit, onRematch }) {
   const processFx = useCallback(
     (list, prevState) => {
       const runFx = makeFxRunner(() => gRef.current, prevState);
+      const monId = (side, slot) => gRef.current.players[side].monsters[slot]?.id ?? prevState?.players[side].monsters[slot]?.id;
       list.forEach((e, i) => {
         setTimeout(() => {
           try { runFx(e, i, list); } catch (err) { /* animasi tidak boleh mengganggu duel */ }
@@ -309,21 +325,21 @@ export default function Duel({ config, onExit, onRematch }) {
           switch (e.type) {
             case 'dmg':
               addFloat(key, e.value > 0 ? `-${e.value}${e.mult > 1 ? ' ▲' : e.mult < 1 ? ' ▼' : ''}` : 'Blok', e.mult > 1 ? '#fb923c' : '#f87171');
-              setFlashFor(key, 'dmg'); sfx.hit(); break;
+              setFlashFor(key, 'dmg'); if (e.value > 0) sfx.hit(); else sfxx.defend(); break;
             case 'heal': addFloat(key, `+${e.value}`, '#4ade80'); setFlashFor(key, 'heal'); sfx.heal(); break;
             case 'lpdmg': addFloat(`${e.side}:lp`, `-${e.value}`, '#f87171'); setFlashFor(`${e.side}:lp`, 'dmg'); sfx.hit(); break;
             case 'lpheal': addFloat(`${e.side}:lp`, `+${e.value}`, '#4ade80'); setFlashFor(`${e.side}:lp`, 'heal'); sfx.heal(); break;
             case 'buff': addFloat(key, e.value ? `+${e.value}` : '▲', '#fde047'); setFlashFor(key, 'buff'); sfx.buff(); break;
-            case 'shield': addFloat(key, 'Tertahan', '#93c5fd'); break;
-            case 'shieldup': addFloat(key, 'Perisai', '#93c5fd'); sfx.buff(); break;
+            case 'shield': addFloat(key, 'Tertahan', '#93c5fd'); sfxx.defend(); break;
+            case 'shieldup': addFloat(key, 'Perisai', '#93c5fd'); sfxx.defend(); break;
             case 'stun': addFloat(key, 'Beku', '#7dd3fc'); break;
             case 'burn': addFloat(key, 'Terbakar', '#fb923c'); break;
-            case 'summon': setFlashFor(key, 'summon'); sfx.cast(); break;
+            case 'summon': setFlashFor(key, 'summon'); sfxx.summon(CARDS[monId(e.side, e.slot)]?.element, CARDS[monId(e.side, e.slot)]?.rarity); pushCut({ kind: 'big', side: e.side, cardId: monId(e.side, e.slot), label: 'Panggil!' }); break;
             case 'destroy': addFloat(key, 'Hancur', '#f87171'); sfx.destroy(); break;
             case 'bounce': addFloat(key, 'Kembali ke tangan', '#a5f3fc'); break;
-            case 'attack': setAttacking({ key: `${e.side}:${e.slot}`, id: Math.random() }); sfx.attack(); setTimeout(() => setAttacking(null), 500); break;
-            case 'skill': addFloat(key, e.name, '#c4b5fd'); sfx.skill(); break;
-            case 'cast': if (!e.hidden) { setBanner({ id: Math.random(), cardId: e.id, side: e.side }); sfx.cast(); } break;
+            case 'attack': setAttacking({ key: `${e.side}:${e.slot}`, id: Math.random() }); sfxx.attack(CARDS[monId(e.side, e.slot)]?.element); setTimeout(() => setAttacking(null), 500); pushCut({ kind: 'peek', side: e.side, cardId: monId(e.side, e.slot) }); break;
+            case 'skill': addFloat(key, e.name, '#c4b5fd'); sfxx.skill(CARDS[monId(e.side, e.slot)]?.element); pushCut({ kind: 'big', side: e.side, cardId: monId(e.side, e.slot), label: e.name }); break;
+            case 'cast': if (!e.hidden) { setBanner({ id: Math.random(), cardId: e.id, side: e.side }); sfxx.cast(CARDS[e.id]?.element, CARDS[e.id]?.rarity); pushCut({ kind: 'peek', side: e.side, cardId: e.id }); } break;
             case 'trap': setBanner({ id: Math.random(), cardId: e.id, side: e.side, trap: true }); break;
             case 'draw': if (e.side === 'player') sfx.draw(); break;
             case 'turn': setBanner({ id: Math.random(), text: e.side === 'player' ? 'Giliranmu' : 'Giliran Lawan' }); sfx.turn(); break;
@@ -332,7 +348,7 @@ export default function Duel({ config, onExit, onRematch }) {
         }, i * 150);
       });
     },
-    [addFloat, setFlashFor],
+    [addFloat, setFlashFor, pushCut],
   );
 
   useEffect(() => {
@@ -351,6 +367,7 @@ export default function Duel({ config, onExit, onRematch }) {
     (a) => {
       const prev = gRef.current;
       let next = reduce(prev, a);
+      if (a.type === 'TOGGLE') sfxx.toggle(next.players[a.side]?.monsters[a.slot]?.pos);
 
       // hadiah: monster lawan hancur -> pelaku mengambil hadiah (AI otomatis, pemain memilih sendiri)
       const earned = next.winner ? { player: { n: 0, names: [] }, enemy: { n: 0, names: [] } } : countKills(prev, next);
@@ -365,6 +382,7 @@ export default function Duel({ config, onExit, onRematch }) {
           for (let i = 0; i < n; i += 1) got.push(list.splice(Math.floor(Math.random() * list.length), 1)[0]);
           prizesRef.current = { ...prizesRef.current, enemy: list };
           next = giveToHand(next, 'enemy', got);
+          sfxx.prize(CARDS[got[0]?.id]?.rarity);
         } else {
           pendingRef.current = { ...pendingRef.current, player: pendingRef.current.player + n };
         }
@@ -413,7 +431,7 @@ export default function Duel({ config, onExit, onRematch }) {
     setG(next);
     setDetail((d) => [...d, { id: ++detailId.current, kind: 'kartu', side: 'player', text: `Kamu mengambil hadiah: ${CARDS[card.id]?.name ?? 'kartu'}` }].slice(-300));
     addFloat('player:lp', `+${CARDS[card.id]?.name ?? 'Kartu'}`, '#fde047');
-    sfx.draw();
+    sfxx.prize(CARDS[card.id]?.rarity);
   };
 
   // AI lawan
@@ -440,9 +458,54 @@ export default function Duel({ config, onExit, onRematch }) {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [g.log.length, showLog]);
 
+  // sidebar kanan tanpa scroll: bagian paling atas terpotong, entri terbaru selalu terlihat
+  const rightRef = useRef(null);
+  const stickLog = useCallback(() => {
+    const r = rightRef.current;
+    if (!r) return;
+    r.querySelectorAll('*').forEach((el) => {
+      if (el.scrollHeight > el.clientHeight + 1) el.scrollTop = el.scrollHeight;
+    });
+  }, []);
+  useEffect(() => {
+    stickLog();
+    const t = setTimeout(stickLog, 60);
+    return () => clearTimeout(t);
+  }, [detail.length, g.log.length, stickLog]);
+
   /* ---------- turunan ---------- */
   const me = g.players.player;
   const myTurn = g.active === 'player' && !g.winner;
+
+  /* ---------- tangan: paginasi panah (tanpa scroll) ---------- */
+  const handBox = useRef(null);
+  const stepRef = useRef(0);
+  const [perPage, setPerPage] = useState(7);
+  const [handPage, setHandPage] = useState(0);
+
+  useLayoutEffect(() => {
+    const box = handBox.current;
+    if (!box) return undefined;
+    const calc = () => {
+      const row = box.querySelector('[data-hand-row]');
+      const items = row?.children;
+      if (!items || items.length === 0) return;
+      const w = items[0].offsetWidth;
+      if (items.length >= 2) stepRef.current = items[1].offsetLeft - items[0].offsetLeft;
+      else if (!stepRef.current) stepRef.current = w;
+      const step = stepRef.current || w || 80;
+      const avail = box.clientWidth - 2 * 40 - 24; // dua tombol panah + padding
+      setPerPage(Math.max(1, Math.floor((avail - w) / step) + 1));
+    };
+    calc();
+    const ro = new ResizeObserver(calc);
+    ro.observe(box);
+    return () => ro.disconnect();
+  }, [me.hand.length]);
+
+  const handPages = Math.max(1, Math.ceil(me.hand.length / perPage));
+  const page = Math.min(handPage, handPages - 1);
+  const visibleHand = me.hand.slice(page * perPage, page * perPage + perPage);
 
   const selInfo = useMemo(() => {
     if (!sel) return null;
@@ -520,9 +583,9 @@ export default function Duel({ config, onExit, onRematch }) {
       if (!chk.ok) return <p className="text-xs font-semibold text-rose-300">{chk.reason}</p>;
       if (d.type === 'monster') {
         return (
-          <div className="space-y-2">
-            <Btn primary onClick={() => act({ type: 'PLAY', side: 'player', uid: selInfo.card.uid, pos: 'atk' })}>Panggil · Serang</Btn>
-            <Btn onClick={() => act({ type: 'PLAY', side: 'player', uid: selInfo.card.uid, pos: 'def' })}>Panggil · Bertahan</Btn>
+          <div className="grid grid-cols-2 gap-2">
+            <Btn primary onClick={() => act({ type: 'PLAY', side: 'player', uid: selInfo.card.uid, pos: 'atk' })}>Serang</Btn>
+            <Btn onClick={() => act({ type: 'PLAY', side: 'player', uid: selInfo.card.uid, pos: 'def' })}>Bertahan</Btn>
           </div>
         );
       }
@@ -537,7 +600,7 @@ export default function Duel({ config, onExit, onRematch }) {
       const sc = d.skill ? canSkill(g, 'player', slot) : null;
       const targets = atkOk ? attackTargets(g, 'player', slot) : [];
       return (
-        <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-2">
           {atkOk ? (
             <Btn
               primary
@@ -550,7 +613,7 @@ export default function Duel({ config, onExit, onRematch }) {
               <Swords size={15} /> {targets[0] === 'direct' ? 'Serang Langsung!' : 'Serang'}
             </Btn>
           ) : (
-            <p className="text-xs text-slate-400">{attackReason(slot)}</p>
+            <p className="col-span-2 text-xs text-slate-400">{attackReason(slot)}</p>
           )}
           {d.skill && (
             <Btn
@@ -560,8 +623,8 @@ export default function Duel({ config, onExit, onRematch }) {
               {d.skill.name} · {d.skill.cost} energi
             </Btn>
           )}
-          {d.skill && !sc.ok && <p className="text-[11px] text-slate-400">Skill: {sc.reason}</p>}
-          <Btn disabled={inst.acted} onClick={() => act({ type: 'TOGGLE', side: 'player', slot })}>
+          {d.skill && !sc.ok && <p className="col-span-2 text-[11px] text-slate-400">Skill: {sc.reason}</p>}
+          <Btn className={atkOk === !!d.skill ? 'col-span-2' : ''} disabled={inst.acted} onClick={() => act({ type: 'TOGGLE', side: 'player', slot })}>
             {inst.pos === 'atk' ? 'Ganti ke bertahan' : 'Ganti ke serang'}
           </Btn>
         </div>
@@ -574,44 +637,71 @@ export default function Duel({ config, onExit, onRematch }) {
 
   /* ---------- tampilan ---------- */
   return (
-    <div className="no-select flex h-[100dvh] w-full overflow-hidden">
-      {/* panel kiri (desktop): kartu di atas, catatan di bawah dengan posisi tetap */}
-      <aside className="hidden w-72 shrink-0 flex-col border-r border-white/[0.07] bg-[#0a0c11]/80 lg:flex xl:w-80">
-        {/* view kartu: bisa digulir, tidak memengaruhi catatan */}
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3">
+    <div className="no-select flex h-[100dvh] w-full overflow-hidden overscroll-none">
+      {/* panel kiri (desktop): detail kartu & aksi */}
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-white/[0.07] bg-[#0a0c11]/80 lg:flex xl:w-72">
+        <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3">
           {shownId ? (
             <>
+              {/* kartu selebar panel (1em kartu = 1/10 lebar panel) */}
               <div className="flex justify-center">
-                <Card id={shownId} size="lg" glow />
+                <Card id={shownId} size="lg" className="!text-[23px] xl:!text-[26px]" />
               </div>
+
+              {/* ringkasan */}
+              <div className="flex flex-wrap gap-1.5 text-[11px]">
+                {[
+                  `Biaya ${CARDS[shownId].cost}`,
+                  ELEMENTS[CARDS[shownId].element]?.name,
+                  RARITY[CARDS[shownId].rarity]?.name,
+                ].filter(Boolean).map((t) => (
+                  <span key={t} className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-slate-300">{t}</span>
+                ))}
+              </div>
+
               {shown?.side != null && shown.slot != null && <InstanceInfo g={g} side={shown.side} slot={shown.slot} />}
-              {selInfo?.kind === 'mon' && !hover && <InstanceInfo g={g} side={selInfo.side} slot={selInfo.slot} />}
+
+              {lines.length > 0 && (
+                <div className="space-y-1.5 rounded-lg border border-white/[0.07] bg-white/[0.03] p-2.5 text-xs leading-snug">
+                  {lines.map((l, i) => (
+                    <p key={i}><b className={l.skill ? 'text-violet-300' : 'text-amber-200'}>{l.k}:</b> <span className="text-slate-300">{l.text}</span></p>
+                  ))}
+                </div>
+              )}
               {CARDS[shownId].kw?.length > 0 && (
-                <ul className="space-y-0.5 text-[11px] text-slate-400">
-                  {CARDS[shownId].kw.map((k) => <li key={k}><b>{KEYWORDS[k].name}</b>: {KEYWORDS[k].desc}</li>)}
+                <ul className="space-y-1 text-[11px] leading-snug text-slate-400">
+                  {CARDS[shownId].kw.map((k) => <li key={k}><b className="text-slate-300">{KEYWORDS[k].name}</b>: {KEYWORDS[k].desc}</li>)}
                 </ul>
               )}
-              {selInfo && <div>{renderActions()}</div>}
+              {CARDS[shownId].flavor && <p className="text-[11px] italic leading-snug text-slate-500">“{CARDS[shownId].flavor}”</p>}
             </>
           ) : (
             <p className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-slate-500">
               Arahkan kursor atau ketuk kartu untuk melihat detail dan aksi.
             </p>
           )}
-        </div>
 
-        {/* view rincian/catatan: tinggi tetap, selalu menempel di bawah */}
-        <div className="flex h-64 shrink-0 flex-col border-t border-white/[0.07] p-3">
-          <DuelLog g={g} detail={detail} className="flex-1" />
+          {/* info singkat milik pemain */}
+          <div className="mt-auto flex shrink-0 items-center justify-between gap-2 rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-2 text-[11px] tabular-nums text-slate-300">
+            <span>LP <b className="text-white">{me.lp}</b></span>
+            <span>Energi <b className="text-white">{me.mana}/{me.maxMana}</b></span>
+            <span>Hadiah <b className="text-white">{prizes.player.length}</b></span>
+          </div>
+
+          {/* tombol aksi menempel di dasar panel */}
+          {shownId && selInfo && <div className="shrink-0 pt-1">{renderActions()}</div>}
         </div>
       </aside>
 
       {/* papan */}
-      <main className="duel-main flex min-w-0 flex-1 flex-col gap-1 overflow-y-auto px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] sm:px-4 sm:pt-2">
+      <main
+        className="duel-main flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-hidden px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] sm:px-4 sm:pt-2"
+        style={{ '--u': BOARD_UNIT }}
+      >
         <PlayerBar g={g} side="enemy" floats={floats.filter((f) => f.key === 'enemy:lp')} flash={flash['enemy:lp']} active={g.active === 'enemy' && !g.winner} />
         <Strip g={g} side="enemy" onInspect={inspect} />
 
-        <div className="flex min-h-[calc(var(--u)*22+3.5rem)] flex-1 flex-col items-center justify-evenly gap-1">
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-evenly gap-1">
           <div className="flex items-center justify-center gap-2 sm:gap-4">
             <PrizePile cards={prizes.enemy} pending={0} mine={false} onTake={takePrize} />
             {[0, 1, 2].map((s) => (
@@ -651,34 +741,58 @@ export default function Duel({ config, onExit, onRematch }) {
         <Strip g={g} side="player" onInspect={inspect} />
         <PlayerBar g={g} side="player" floats={floats.filter((f) => f.key === 'player:lp')} flash={flash['player:lp']} active={myTurn} />
 
-        {/* tangan */}
-        <div className="shrink-0 overflow-x-auto overflow-y-hidden pb-1 pt-3">
-          <div className="mx-auto flex w-max px-3 -space-x-9 sm:-space-x-6 xl:space-x-1">
-            {me.hand.map((c) => {
-              const ok = myTurn && canPlayCard(g, 'player', c.uid).ok;
-              const on = sel?.kind === 'hand' && sel.uid === c.uid;
-              return (
-                <div
-                  key={c.uid}
-                  className={clsx('transition-transform duration-150', on ? '-translate-y-3 z-10' : 'hover:-translate-y-2 hover:z-10')}
-                  onMouseEnter={() => setHover({ cardId: c.id })}
-                  onMouseLeave={() => setHover(null)}
-                >
-                  <Card
-                    id={c.id}
-                    size="hand"
-                    selected={on}
-                    glow={ok && !on}
-                    dim={!ok}
-                    onClick={() => { sfx.click(); setMode(null); setSel(on ? null : { kind: 'hand', uid: c.uid }); }}
-                  />
-                </div>
-              );
-            })}
-            {me.hand.length === 0 && <p className="px-6 py-8 text-sm text-slate-500">Tanganmu kosong</p>}
+        {/* tangan: tombol panah kiri/kanan, tanpa scroll */}
+        <div ref={handBox} className="flex shrink-0 items-center justify-center gap-1 pb-1 pt-3">
+          <button
+            className="btn btn-sm !h-9 !w-9 shrink-0 !p-0 disabled:opacity-20"
+            disabled={page <= 0}
+            onClick={() => setHandPage(page - 1)}
+            aria-label="Kartu sebelumnya"
+          >
+            <ChevronLeft size={18} />
+          </button>
+
+          <div className="flex min-w-0 flex-col items-center">
+            <div data-hand-row className="flex w-max gap-2 px-3 sm:gap-3">
+              {visibleHand.map((c) => {
+                const ok = myTurn && canPlayCard(g, 'player', c.uid).ok;
+                const on = sel?.kind === 'hand' && sel.uid === c.uid;
+                return (
+                  <div
+                    key={c.uid}
+                    className={clsx('transition-[filter,transform] duration-150', on ? '-translate-y-3 z-10' : 'hover:z-10 hover:brightness-125')}
+                    onMouseEnter={() => setHover({ cardId: c.id })}
+                    onMouseLeave={() => setHover(null)}
+                  >
+                    <Card
+                      id={c.id}
+                      size="hand"
+                      selected={on}
+                      dim={!ok}
+                      onClick={() => { sfx.click(); setMode(null); setSel(on ? null : { kind: 'hand', uid: c.uid }); }}
+                    />
+                  </div>
+                );
+              })}
+              {me.hand.length === 0 && <p className="px-6 py-8 text-sm text-slate-500">Tanganmu kosong</p>}
+            </div>
           </div>
+
+          <button
+            className="btn btn-sm !h-9 !w-9 shrink-0 !p-0 disabled:opacity-20"
+            disabled={page >= handPages - 1}
+            onClick={() => setHandPage(page + 1)}
+            aria-label="Kartu berikutnya"
+          >
+            <ChevronRight size={18} />
+          </button>
         </div>
       </main>
+
+      {/* panel kanan (desktop): rincian & catatan duel */}
+      <aside ref={rightRef} onClickCapture={() => requestAnimationFrame(stickLog)} className="hidden w-64 shrink-0 flex-col overflow-hidden border-l border-white/[0.07] bg-[#0a0c11]/80 p-3 lg:flex xl:w-72 [&_*]:!overflow-y-hidden [&_*]:![scrollbar-width:none] [&_*::-webkit-scrollbar]:hidden">
+        <DuelLog g={g} detail={detail} className="flex-1" />
+      </aside>
 
       {/* sheet mobile */}
       <AnimatePresence>
@@ -733,6 +847,9 @@ export default function Duel({ config, onExit, onRematch }) {
         )}
       </AnimatePresence>
 
+      {/* karakter muncul dari pinggir layar */}
+      <CutIns items={cutIns} />
+
       {/* banner */}
       <AnimatePresence>
         {banner && (
@@ -779,7 +896,7 @@ export default function Duel({ config, onExit, onRematch }) {
         {g.winner && (
           <motion.div className="fixed inset-0 z-[56] flex items-center justify-center bg-[#05060a]/85 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
             <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ delay: 1, type: 'spring' }} className="panel w-full max-w-sm space-y-4 p-6 text-center">
-                            <h2 className={clsx('text-3xl font-semibold tracking-tight', g.winner === 'player' ? 'text-emerald-300' : 'text-rose-300')}>
+              <h2 className={clsx('text-3xl font-semibold tracking-tight', g.winner === 'player' ? 'text-emerald-300' : 'text-rose-300')}>
                 {g.winner === 'player' ? 'Menang' : 'Kalah'}
               </h2>
               <p className="text-sm text-slate-300">{g.reason} · {g.turn} giliran</p>

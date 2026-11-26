@@ -69,11 +69,11 @@ const TRIGGER = {
 export function describeCard(c) {
   const out = [];
   if (c.type === 'monster') {
-    if (c.kw.length) out.push({ k: 'Sifat', text: c.kw.map((k) => `${KEYWORDS[k].icon} ${KEYWORDS[k].name}`).join(' · ') });
-    if (c.onSummon) out.push({ k: 'Seruan', text: describeFx(c.onSummon) });
+    if (c.kw.length) out.push({ k: 'Pasif', text: c.kw.map((k) => `${KEYWORDS[k].icon} ${KEYWORDS[k].name}`).join(' · ') });
+    if (c.onSummon) out.push({ k: 'Saat Dipanggil', text: describeFx(c.onSummon) });
     if (c.onStart) out.push({ k: 'Awal giliran', text: describeFx(c.onStart) });
     if (c.onAttack) out.push({ k: 'Saat menyerang', text: describeFx(c.onAttack) });
-    if (c.onDeath) out.push({ k: 'Wasiat', text: describeFx(c.onDeath) });
+    if (c.onDeath) out.push({ k: 'Saat Mati', text: describeFx(c.onDeath) });
     if (c.skill) out.push({ k: `Skill · ${c.skill.name} (${c.skill.cost}⚡)`, text: describeFx(c.skill.fx), skill: true });
   } else if (c.type === 'spell') {
     out.push({ k: 'Efek', text: describeFx(c.fx) });

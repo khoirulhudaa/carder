@@ -626,6 +626,59 @@ export const TOKENS = {
   tkn_lebah: tok('tkn_lebah', 'Lebah Pekerja', 'alam', 500, 200, 400, '🐝', 'Serangga', ['haste']),
 };
 
+// =====================================================================
+//  MINIMUM TIAP KARTU — hanya mengisi yang masih kosong (kartu yang sudah
+//  punya pasif/efek buatan tangan TIDAK diubah).
+//   - Monster : >= 1 PASIF (kata kunci / efek awal giliran / efek saat mati)
+//               dan >= 1 EFEK (efek saat dipanggil atau skill).
+//   - Relik   : >= 1 PASIF (kata kunci) selain bonus statnya.
+//   - Medan   : aura (pasif) + efek awal giliran.
+//  Nilainya naik mengikuti kelangkaan: C < R < E < L.
+// =====================================================================
+const TIER = { C: 0, R: 1, E: 2, L: 3 };
+const byTier = (r, arr) => arr[TIER[r] ?? 0];
+
+const AUTO_PASSIVE = {
+  api: () => ({ kw: ['haste'] }),
+  angin: () => ({ kw: ['haste'] }),
+  petir: () => ({ kw: ['pierce'] }),
+  gelap: () => ({ kw: ['lifesteal'] }),
+  tanah: () => ({ kw: ['shield'] }),
+  netral: () => ({ kw: ['taunt'] }),
+  air: (r) => ({ onStart: [heal('me', byTier(r, [150, 250, 350, 500]))] }),
+  alam: (r) => ({ onStart: [heal('src', byTier(r, [200, 300, 400, 600]))] }),
+  cahaya: (r) => ({ onStart: [heal('allAlly', byTier(r, [100, 150, 200, 300]))] }),
+};
+
+const AUTO_EFFECT = {
+  api: (r) => [burn('randEnemy', byTier(r, [200, 300, 400, 500]))],
+  air: (r) => [heal('me', byTier(r, [300, 500, 800, 1200]))],
+  tanah: (r) => [buff('allAlly', { def: byTier(r, [100, 150, 200, 300]) })],
+  angin: () => [draw(1)],
+  petir: (r) => [dmg('allEnemy', byTier(r, [100, 200, 300, 500]))],
+  alam: (r) => [heal('allAlly', byTier(r, [200, 300, 400, 600]))],
+  cahaya: (r) => [buff('allAlly', { atk: byTier(r, [100, 150, 200, 300]) })],
+  gelap: () => [discard(1)],
+  netral: (r) => byTier(r, [[draw(1)], [mana(1)], [draw(1)], [draw(1), mana(1)]]),
+};
+
+const RELIC_KW = {
+  api: 'haste', air: 'shield', tanah: 'taunt', angin: 'haste', petir: 'pierce',
+  alam: 'taunt', cahaya: 'shield', gelap: 'lifesteal', netral: 'shield',
+};
+
+LIST.forEach((c) => {
+  if (c.type === 'monster') {
+    const hasPassive = (c.kw && c.kw.length) || c.onStart || c.onDeath || c.onAttack;
+    if (!hasPassive) Object.assign(c, (AUTO_PASSIVE[c.element] || AUTO_PASSIVE.netral)(c.rarity));
+    if (!c.skill && !c.onSummon) c.onSummon = (AUTO_EFFECT[c.element] || AUTO_EFFECT.netral)(c.rarity);
+  } else if (c.type === 'relic') {
+    if (!c.kw || !c.kw.length) c.kw = [RELIC_KW[c.element] || 'shield'];
+  } else if (c.type === 'field') {
+    if (!c.onStart) c.onStart = [heal('me', byTier(c.rarity, [100, 150, 250, 400]))];
+  }
+});
+
 export const ALL_CARDS = LIST;
 export const CARDS = Object.fromEntries([...LIST, ...Object.values(TOKENS)].map((c) => [c.id, c]));
 export const getCard = (id) => CARDS[id];
