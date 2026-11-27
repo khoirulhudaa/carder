@@ -2,128 +2,274 @@
 @tailwind components;
 @tailwind utilities;
 
+/* =====================================================================
+   TEMA "TCG LIVE": bar atas merah, papan duel merah (lawan) / biru (kamu),
+   panel biru berbingkai cyan, tombol hexagon, tombol Play hijau.
+   Semua class lama (.btn .panel .chip ...) dipertahankan agar JSX tetap jalan.
+   ===================================================================== */
 :root {
   color-scheme: dark;
   --font-ui: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-  --bg: #08090d;
-  --surface: #0f1218;
-  --surface-2: #151a23;
-  --line: rgba(255, 255, 255, 0.08);
-  --line-2: rgba(255, 255, 255, 0.16);
-  --accent: #818cf8;
+
+  --red-1: #e0262f;      /* bar atas */
+  --red-2: #a9111a;
+  --red-3: #7d0a12;
+  --blue-1: #2f6bdc;     /* sisi pemain */
+  --blue-2: #1c47b0;
+  --blue-3: #0f2a73;
+  --navy: #0a2f63;       /* latar menu */
+  --navy-2: #0e4a8f;
+  --cyan: #28b4ee;       /* bingkai panel */
+  --cyan-2: #0b6fb4;
+  --yellow: #f2d94a;     /* bingkai kartu & highlight */
+  --green-1: #4fd062;
+  --green-2: #1f9a3a;
+  --paper: #eef1f5;
+  --ink: #0b1630;
+
+  --bg: #0a2f63;
+  --line: rgba(255, 255, 255, 0.18);
+  --line-2: rgba(255, 255, 255, 0.35);
+  --accent: #f2d94a;
 }
 
-html,
-body,
-#root {
-  height: 100%;
-}
+html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  background:
-    radial-gradient(900px 480px at 50% -12%, rgba(99, 102, 241, 0.13), transparent 70%),
-    var(--bg);
-  background-attachment: fixed;
-  color: #e6e8ee;
+  color: #f4f7ff;
   font-family: var(--font-ui);
   font-feature-settings: 'tnum', 'cv11';
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
+  background-color: var(--navy);
+  background-image:
+    radial-gradient(1100px 600px at 50% -10%, rgba(40, 180, 238, 0.45), transparent 70%),
+    linear-gradient(135deg, transparent 49.5%, rgba(255,255,255,.035) 50%, transparent 50.5%),
+    linear-gradient(45deg, transparent 49.5%, rgba(255,255,255,.035) 50%, transparent 50.5%),
+    linear-gradient(180deg, var(--navy-2), var(--navy) 70%);
+  background-size: auto, 56px 56px, 56px 56px, auto;
+  background-attachment: fixed;
 }
 
-* {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.16) transparent;
-}
+* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.4) transparent; }
 
 @layer components {
+  /* ---------- tombol: kapsul biru kaca ---------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/[0.04] px-4 py-2 text-sm font-medium tracking-tight text-slate-100 transition hover:border-white/25 hover:bg-white/[0.09] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-400 active:scale-[.98] disabled:pointer-events-none disabled:opacity-40;
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-bold tracking-tight text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300 active:translate-y-px disabled:pointer-events-none disabled:opacity-40;
+    border: 1px solid #7fd4ff;
+    background: linear-gradient(180deg, #3aa7ea 0%, #1b73c4 50%, #125aa3 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 2px 0 #0a3d73, 0 4px 8px rgba(0,0,0,.35);
+    text-shadow: 0 1px 0 rgba(0,0,0,.4);
   }
+  .btn:hover { filter: brightness(1.12); }
+
+  /* tombol utama = hijau seperti "Play!" */
   .btn-primary {
-    @apply border-transparent bg-indigo-400 font-semibold text-slate-950 hover:bg-indigo-300;
+    @apply font-extrabold;
+    border-color: #b6ffc2;
+    background: linear-gradient(180deg, #62e275 0%, #2fb948 50%, #1f8f36 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 2px 0 #0e5a1f, 0 4px 10px rgba(0,0,0,.4);
   }
   .btn-danger {
-    @apply border-rose-400/30 bg-rose-500/10 text-rose-200 hover:bg-rose-500/20;
+    border-color: #ffb3b6;
+    background: linear-gradient(180deg, #f0545c 0%, #c8212b 50%, #9d141d 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #5e0a10, 0 4px 8px rgba(0,0,0,.35);
   }
-  .btn-sm {
-    @apply px-3 py-1.5 text-xs;
-  }
+  .btn-sm { @apply px-3 py-1.5 text-xs; }
+
+  /* ---------- panel: biru tua + bingkai cyan (modal Silver Tempest) ---------- */
   .panel {
-    @apply rounded-xl border border-white/[0.08] bg-[#0f1218]/90;
+    @apply rounded-lg;
+    background: linear-gradient(180deg, rgba(14,74,143,.96), rgba(8,40,92,.97));
+    border: 2px solid var(--cyan);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 8px 24px rgba(0,0,0,.45);
   }
+
+  /* ---------- chip = tab kuning-hijau miring ---------- */
   .chip {
-    @apply inline-flex items-center gap-1.5 rounded-full border border-white/10 px-2.5 py-1 text-xs font-medium text-slate-300 transition hover:border-white/25 hover:text-white;
+    @apply inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-white transition;
+    border: 1px solid rgba(255,255,255,.4);
+    background: linear-gradient(180deg, #1f6fc0, #124785);
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+    padding-inline: 1rem;
+    border-radius: 0;
   }
+  .chip:hover { filter: brightness(1.2); }
   .chip-on {
-    @apply border-indigo-300/60 bg-indigo-400/15 text-indigo-100;
+    color: #10260a;
+    background: linear-gradient(180deg, #f6ee7a, #9fdc45);
+    text-shadow: none;
   }
-  .eyebrow {
-    @apply text-xs font-medium tracking-wide text-slate-500;
+
+  .eyebrow { @apply text-sm font-extrabold tracking-wide text-white; text-shadow: 0 1px 0 rgba(0,0,0,.5); }
+
+  /* ---------- bar atas merah (menu, deck, toko) ---------- */
+  .tcg-nav {
+    @apply relative flex items-center gap-2 px-3;
+    min-height: 48px;
+    background: linear-gradient(180deg, var(--red-1), var(--red-2));
+    border-bottom: 3px solid var(--red-3);
+    box-shadow: 0 3px 10px rgba(0,0,0,.45);
   }
+  .tcg-tab {
+    @apply px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white/80 transition hover:text-white;
+    border-bottom: 3px solid transparent;
+  }
+  .tcg-tab-on { @apply text-white; background: rgba(0,0,0,.22); border-bottom-color: #fff; }
+  .tcg-currency {
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-extrabold text-white tabular-nums;
+    background: rgba(0,0,0,.45);
+    border: 1px solid rgba(255,255,255,.25);
+  }
+
+  /* ---------- panel putih-abu seperti Card Library ---------- */
+  .tcg-paper {
+    background: var(--paper);
+    color: var(--ink);
+    border: 1px solid #c3cad6;
+    box-shadow: inset 0 0 0 1px #fff;
+  }
+
+  /* bingkai kartu kuning + lencana jumlah (Card Library) */
+  .tcg-cardframe {
+    @apply relative rounded-[6px] p-[3px];
+    background: linear-gradient(180deg, var(--yellow), #c9b32a);
+    box-shadow: 0 2px 4px rgba(0,0,0,.4);
+  }
+  .tcg-cardframe.is-dim { filter: grayscale(.85) brightness(.55); }
+  .tcg-count {
+    @apply absolute -bottom-2 left-1/2 z-10 flex h-5 min-w-[22px] -translate-x-1/2 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold tabular-nums;
+    background: #fff; color: var(--ink); border: 1px solid #98a2b3;
+  }
+
+  /* ---------- hexagon (avatar pemain, kartu lawan, End Turn) ---------- */
+  .tcg-hex {
+    clip-path: polygon(14% 0, 86% 0, 100% 50%, 86% 100%, 14% 100%, 0 50%);
+  }
+  .tcg-hex-tag {
+    @apply flex items-center gap-2 px-6 py-1.5 font-extrabold text-white;
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
+  }
+  /* label pemain & giliran: kaca putih transparan (tidak lagi merah/biru) */
+.tcg-hex-tag.is-me,
+.tcg-hex-tag.is-foe {
+  background: linear-gradient(90deg, rgba(255,255,255,.34), rgba(255,255,255,.14));
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  text-shadow: 0 1px 2px rgba(0,0,0,.45);
 }
 
-/* ---------- bobot huruf lebih ringan: tampilan lebih modern ---------- */
-.font-extrabold { font-weight: 650; }
-.font-black { font-weight: 700; }
-.font-display { letter-spacing: -0.015em; }
+.tcg-endturn {
+    @apply flex h-[74px] w-[86px] items-center justify-center text-center text-[15px] font-black uppercase leading-[1.05] tracking-wide transition active:scale-95 disabled:opacity-40;
+    clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
+    color: #0b1630;
+    background: linear-gradient(180deg, #ffffff, #cfd6e2);
+    filter: drop-shadow(0 3px 0 rgba(0,0,0,.45));
+  }
+  .tcg-endturn.is-ready { background: linear-gradient(180deg, #fffbd0, var(--yellow)); animation: pulseTurn 1.4s ease-in-out infinite; }
+  @keyframes pulseTurn { 50% { filter: drop-shadow(0 0 12px rgba(242,217,74,.95)) drop-shadow(0 3px 0 rgba(0,0,0,.45)); } }
+
+  /* tombol Play! besar hijau (Trainer Challenge) */
+  .tcg-play {
+    @apply flex w-full max-w-sm items-center justify-center gap-2 py-3 text-2xl font-black text-white transition active:translate-y-px disabled:opacity-40;
+    clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
+    background: linear-gradient(180deg, #67e67a, #2bb143 55%, #1a8a33);
+    text-shadow: 0 2px 0 rgba(0,0,0,.45);
+    filter: drop-shadow(0 3px 0 #0b4a1a);
+  }
+  .tcg-play:hover { filter: brightness(1.1) drop-shadow(0 3px 0 #0b4a1a); }
+
+  /* dropdown kuning-hijau ("City Championship", "All Decks") */
+  .tcg-select {
+    @apply px-6 py-1.5 text-sm font-extrabold text-white;
+    clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
+    background: linear-gradient(180deg, #3cb44e, #1f7e32);
+  }
+
+  /* strip pilihan lawan / deck */
+  .tcg-strip {
+    @apply rounded-md p-2;
+    background: rgba(5, 30, 70, .75);
+    border: 1px solid rgba(255,255,255,.2);
+    box-shadow: inset 0 0 14px rgba(0,0,0,.5);
+  }
+  .tcg-item { @apply relative transition; }
+  .tcg-item.is-on { outline: 3px solid var(--yellow); outline-offset: 1px; box-shadow: 0 0 16px rgba(242,217,74,.7); }
+}
+
+/* bobot huruf */
+.font-extrabold { font-weight: 800; }
+.font-black { font-weight: 900; }
+.font-display { letter-spacing: -0.01em; }
 
 /* ---------- efek aksi di papan ---------- */
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20% { transform: translateX(-4px); }
-  40% { transform: translateX(4px); }
-  60% { transform: translateX(-2px); }
-  80% { transform: translateX(2px); }
-}
-@keyframes holo {
-  0% { background-position: 0% 0%; }
-  100% { background-position: 200% 200%; }
-}
-@keyframes popIn {
-  0% { transform: scale(0.7); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
-}
+@keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-4px)} 40%{transform:translateX(4px)} 60%{transform:translateX(-2px)} 80%{transform:translateX(2px)} }
+@keyframes holo { 0%{background-position:0% 0%} 100%{background-position:200% 200%} }
+@keyframes popIn { 0%{transform:scale(.7);opacity:0} 100%{transform:scale(1);opacity:1} }
+@keyframes swirl { to { transform: rotate(360deg); } }
 
-.fx-dmg { animation: shake 0.4s; box-shadow: 0 0 0 1px rgba(248, 113, 113, 0.9), 0 0 14px rgba(248, 113, 113, 0.5) !important; }
-.fx-heal { box-shadow: 0 0 0 1px rgba(74, 222, 128, 0.9), 0 0 14px rgba(74, 222, 128, 0.45) !important; }
-.fx-buff { box-shadow: 0 0 0 1px rgba(165, 180, 252, 0.9), 0 0 14px rgba(129, 140, 248, 0.5) !important; }
-.fx-summon { animation: popIn 0.3s ease-out; }
+.fx-dmg { animation: shake .4s; box-shadow: 0 0 0 2px rgba(255,90,90,.95), 0 0 16px rgba(255,90,90,.6) !important; }
+.fx-heal { box-shadow: 0 0 0 2px rgba(74,222,128,.95), 0 0 16px rgba(74,222,128,.5) !important; }
+.fx-buff { box-shadow: 0 0 0 2px rgba(255,235,120,.95), 0 0 16px rgba(255,235,120,.55) !important; }
+.fx-summon { animation: popIn .3s ease-out; }
 
 .holo::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background: linear-gradient(115deg, transparent 20%, rgba(255, 255, 255, 0.25) 40%, rgba(255, 190, 255, 0.18) 50%, rgba(160, 230, 255, 0.18) 58%, transparent 70%);
-  background-size: 250% 250%;
-  mix-blend-mode: overlay;
-  animation: holo 3.5s linear infinite;
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.25) 40%, rgba(255,190,255,.18) 50%, rgba(160,230,255,.18) 58%, transparent 70%);
+  background-size: 250% 250%; mix-blend-mode: overlay; animation: holo 3.5s linear infinite;
 }
 
-/* ---------- ukuran adaptif layar duel ----------
-   --u = 1em kartu/ubin. Dihitung agar 2 baris monster + tangan selalu muat di tinggi layar
-   dan 3 ubin muat di lebar layar. */
+/* =====================================================================
+   PAPAN DUEL: setengah atas merah (lawan), setengah bawah biru (kamu),
+   di tengah lorong ungu-gelap berputar. Dipasang pada <main class="duel-main">.
+   ===================================================================== */
+.duel-root {
+  background: #0a0f3a;
+}
+.duel-root::before {
+  content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    repeating-radial-gradient(circle at 50% 50%, rgba(80,70,255,.55) 0 3px, transparent 3px 46px),
+    radial-gradient(circle at 50% 50%, #000 0 22%, #16126b 60%, #3a2aa8 100%);
+  opacity: .9;
+}
 .duel-main {
   --u: clamp(7px, min(calc((100dvh - 300px) / 35), calc((100vw - 56px) / 28)), 18px);
+  position: relative; z-index: 1;
 }
 @media (min-width: 1024px) {
-  .duel-main {
-    --u: clamp(7px, min(calc((100dvh - 290px) / 33), calc((100vw - 630px) / 28)), 22px);
-  }
+  .duel-main { --u: clamp(7px, min(calc((100dvh - 290px) / 33), calc((100vw - 630px) / 28)), 22px); }
 }
 @media (min-width: 1280px) {
-  .duel-main {
-    --u: clamp(7px, min(calc((100dvh - 290px) / 33), calc((100vw - 700px) / 28)), 22px);
-  }
+  .duel-main { --u: clamp(7px, min(calc((100dvh - 290px) / 33), calc((100vw - 700px) / 28)), 22px); }
 }
+/* zona lawan & zona pemain: kaca putih transparan, lurus (tanpa lengkungan) */
+.duel-zone {
+  @apply relative flex flex-col items-center justify-evenly gap-1 px-2 py-2;
+}
+.duel-zone.is-foe,
+.duel-zone.is-me {
+  background: linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.10));
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+  border-radius: 0;
+  border: 0;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.2);
+}
+.duel-zone.is-foe { border-bottom: 1px solid rgba(255,255,255,.35); }
+.duel-zone.is-me { border-top: 1px solid rgba(255,255,255,.35); }
+/* alas kotak kartu (tempat monster): kaca lebih terang */
+.duel-lane {
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255,255,255,.4);
+  border-radius: 8px;
+  box-shadow: inset 0 0 12px rgba(255,255,255,.12);
+}
+/* garis kuning pemisah di sekitar kartu aktif */
+.duel-rule { height: 6px; border-radius: 6px; background: linear-gradient(90deg, #b8a520, #ece15a, #b8a520); }
 
 .u-size { font-size: var(--u, 12px); }
-
-.no-select {
-  user-select: none;
-  -webkit-user-select: none;
-  -webkit-touch-callout: none;
-}
+.no-select { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }

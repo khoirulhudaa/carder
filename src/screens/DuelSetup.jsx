@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import clsx from 'clsx';
-import { Swords, AlertTriangle } from 'lucide-react';
+import { AlertTriangle } from 'lucide-react';
 import Header from '../components/Header.jsx';
 import { useStore } from '../store/useStore.js';
 import { OPPONENTS, DIFFICULTIES, buildEnemyDeck } from '../data/opponents.js';
@@ -32,31 +32,11 @@ export default function DuelSetup({ onBack, onStart }) {
 
   return (
     <div className="flex h-[100dvh] flex-col">
-      <Header title="Siapkan Duel" onBack={onBack} />
-      <div className="mx-auto w-full max-w-8xl flex-1 space-y-8 overflow-y-auto p-4 sm:p-6">
+      <Header title="Trainer Challenge" onBack={onBack} />
+      <div className="mx-auto w-full max-w-5xl flex-1 space-y-5 overflow-y-auto p-4 sm:p-6">
         <section>
-          <h2 className="eyebrow mb-3">1 · Deck</h2>
-          <div className="flex flex-wrap gap-2">
-            {decks.map((d) => {
-              const ok = validateDeck(d.cards, collection).ok;
-              return (
-                <button key={d.id} onClick={() => setDeckId(d.id)} className={clsx('chip !px-3.5 !py-2 text-sm', deckId === d.id && 'chip-on')}>
-                  {!ok && <AlertTriangle size={13} className="text-rose-400" />} {d.name}
-                  <span className="text-slate-500">{d.cards.length}</span>
-                </button>
-              );
-            })}
-          </div>
-          {!check.ok && (
-            <p className="mt-3 rounded-lg border border-rose-400/20 bg-rose-500/[0.07] p-2.5 text-xs text-rose-300">
-              Deck belum valid: {check.errors.slice(0, 2).join(' · ')}. Perbaiki di Deck Builder.
-            </p>
-          )}
-        </section>
-
-        <section>
-          <h2 className="eyebrow mb-3">2 · Lawan</h2>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="mb-2 flex justify-center"><span className="tcg-select">Pilih lawan</span></div>
+          <div className="tcg-strip grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {OPPONENTS.map((o) => {
               const el = o.element ? ELEMENTS[o.element] : null;
               const on = oppId === o.id;
@@ -65,15 +45,15 @@ export default function DuelSetup({ onBack, onStart }) {
                   key={o.id}
                   onClick={() => { sfx.click(); setOppId(o.id); }}
                   className={clsx(
-                    'relative flex items-center gap-3 overflow-hidden rounded-xl border p-3 text-left transition active:scale-[.99]',
-                    on ? 'border-white/40 bg-white/[0.06]' : 'border-white/[0.08] bg-[#0f1218]/90 hover:border-white/25',
+                    'tcg-item tcg-hex flex items-center gap-3 px-6 py-2.5 text-left active:scale-[.99]',
+                    on ? 'is-on bg-gradient-to-r from-yellow-200 to-yellow-400 !text-slate-900' : 'bg-white/10 hover:bg-white/20',
                   )}
                 >
-                  <i className="absolute inset-y-0 left-0 w-[3px]" style={{ background: el?.color || '#64748b' }} />
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/[0.04] text-2xl">{o.avatar}</span>
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white/50 bg-black/30 text-2xl">{o.avatar}</span>
                   <span className="min-w-0">
-                    <span className="block truncate text-sm font-semibold tracking-tight">{o.name}</span>
-                    <span className="block text-xs text-slate-500">
+                    <span className="block truncate text-sm font-extrabold">{o.name}</span>
+                    <span className={clsx('block truncate text-xs', on ? 'text-slate-700' : 'text-white/70')}>
+                      <i className="mr-1 inline-block h-2 w-2 rounded-full align-middle" style={{ background: el?.color || '#94a3b8' }} />
                       {el ? el.name : 'Acak'} · {o.desc}
                     </span>
                   </span>
@@ -84,26 +64,53 @@ export default function DuelSetup({ onBack, onStart }) {
         </section>
 
         <section>
-          <h2 className="eyebrow mb-3">3 · Kesulitan</h2>
+          <div className="mb-2 flex justify-center"><span className="tcg-select">Pilih deck</span></div>
+          <div className="tcg-strip flex gap-3 overflow-x-auto">
+            {decks.map((d) => {
+              const ok = validateDeck(d.cards, collection).ok;
+              return (
+                <button
+                  key={d.id}
+                  onClick={() => setDeckId(d.id)}
+                  className={clsx('tcg-item flex h-32 w-28 shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-white/40 bg-gradient-to-b from-sky-400 to-blue-900 p-2 text-center', deckId === d.id && 'is-on')}
+                >
+                  <span className="line-clamp-2 text-sm font-extrabold leading-tight">{d.name}</span>
+                  <span className="flex items-center gap-1 text-[11px] text-white/90">
+                    {!ok && <AlertTriangle size={12} className="text-yellow-300" />} {d.cards.length} kartu
+                  </span>
+                </button>
+              );
+            })}
+            {decks.length === 0 && <p className="p-4 text-sm text-white/80">Belum ada deck. Buat di Deck Builder.</p>}
+          </div>
+          {!check.ok && (
+            <p className="mt-2 rounded-md border border-yellow-300/50 bg-black/50 p-2.5 text-xs text-yellow-200">
+              Deck belum valid: {check.errors.slice(0, 2).join(' · ')}. Perbaiki di Deck Builder.
+            </p>
+          )}
+        </section>
+
+        <section>
+          <div className="mb-2 flex justify-center"><span className="tcg-select">Kesulitan</span></div>
           <div className="grid grid-cols-3 gap-2">
             {Object.values(DIFFICULTIES).map((d) => (
               <button
                 key={d.id}
                 onClick={() => setDiff(d.id)}
-                className={clsx('rounded-xl border p-3 text-center transition', diff === d.id ? 'border-indigo-300/60 bg-indigo-400/10' : 'border-white/[0.08] bg-[#0f1218]/90 hover:border-white/25')}
+                className={clsx('tcg-item rounded-md border border-white/30 p-3 text-center', diff === d.id ? 'is-on bg-gradient-to-b from-yellow-200 to-yellow-500 text-slate-900' : 'bg-white/10 hover:bg-white/20')}
               >
-                <div className="text-sm font-semibold tracking-tight">{d.name}</div>
-                <div className="mt-0.5 text-xs text-slate-400">+{d.reward} koin</div>
-                <div className="mt-1 hidden text-[11px] text-slate-500 sm:block">{d.desc}</div>
+                <div className="text-sm font-extrabold">{d.name}</div>
+                <div className="mt-0.5 text-xs font-bold">+{d.reward} koin</div>
+                <div className={clsx('mt-1 hidden text-[11px] sm:block', diff === d.id ? 'text-slate-700' : 'text-white/70')}>{d.desc}</div>
               </button>
             ))}
           </div>
         </section>
       </div>
 
-      <div className="shrink-0 border-t border-white/[0.07] bg-[#08090d]/80 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur">
-        <button className="btn btn-primary mx-auto flex w-full max-w-md !py-3 text-[15px]" disabled={!check.ok} onClick={start}>
-          <Swords size={17} /> Mulai duel vs {opp.name.split(',')[0]}
+      <div className="flex shrink-0 justify-center border-t-2 border-cyan-400/50 bg-[#0a2f63]/90 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+        <button className="tcg-play" disabled={!check.ok} onClick={start}>
+          Play!
         </button>
       </div>
     </div>

@@ -94,7 +94,7 @@ export default function DeckBuilder({ onBack }) {
 
   return (
     <div className="flex h-[100dvh] flex-col">
-      <Header title="Deck Builder" onBack={onBack} compact>
+      <Header title="Decks" onBack={onBack} compact>
         <div className="flex gap-1 lg:hidden">
           {['koleksi', 'deck'].map((t) => (
             <button key={t} className={clsx('chip', tab === t && 'chip-on')} onClick={() => setTab(t)}>
@@ -105,10 +105,10 @@ export default function DeckBuilder({ onBack }) {
       </Header>
 
       <div className="flex min-h-0 flex-1 flex-col gap-3 p-3 lg:flex-row">
-        {/* koleksi */}
+        {/* koleksi (Card Library) */}
         <section className={clsx('flex min-h-0 flex-1 flex-col gap-2', tab !== 'koleksi' && 'hidden lg:flex')}>
           <FilterBar f={f} />
-          <div className="min-h-0 flex-1 overflow-y-auto">
+          <div className="tcg-paper min-h-0 flex-1 overflow-y-auto rounded-md">
             <CardGrid
               items={list.map((c) => {
                 const have = collection[c.id] || 0;
@@ -124,10 +124,10 @@ export default function DeckBuilder({ onBack }) {
         {/* deck */}
         <aside className={clsx('panel flex min-h-0 flex-col gap-2 p-3 lg:w-80 xl:w-96', tab !== 'deck' ? 'hidden lg:flex' : 'flex-1 lg:flex-none')}>
           <div className="flex gap-2">
-            <select value={isSaved ? cur.id : ''} onChange={(e) => load(e.target.value)} className="chip min-w-0 flex-1 bg-[#151a23] !py-2">
+            <select value={isSaved ? cur.id : ''} onChange={(e) => load(e.target.value)} className="tcg-select min-w-0 flex-1 !px-5 !py-2">
               {!isSaved && <option value="">(belum disimpan)</option>}
               {decks.map((d) => (
-                <option key={d.id} value={d.id}>
+                <option key={d.id} value={d.id} className="text-black">
                   {d.name}
                   {d.id === activeDeck ? ' (aktif)' : ''}
                 </option>
@@ -141,15 +141,15 @@ export default function DeckBuilder({ onBack }) {
             value={cur.name}
             maxLength={24}
             onChange={(e) => setCur((d) => ({ ...d, name: e.target.value }))}
-            className="rounded-lg border border-white/15 bg-black/30 px-3 py-1.5 text-sm outline-none focus:border-amber-300/60"
+            className="rounded-md border border-white/40 bg-black/40 px-3 py-1.5 text-sm font-bold text-white outline-none focus:border-yellow-300"
             placeholder="Nama deck"
           />
 
           <div className="flex flex-wrap items-center justify-between gap-x-3 text-xs">
-            <span className={clsx('font-bold', check.ok ? 'text-emerald-300' : 'text-orange-300')}>
+            <span className={clsx('font-extrabold', check.ok ? 'text-green-300' : 'text-yellow-300')}>
               {cur.cards.length}/{DECK_MIN}–{DECK_MAX} kartu
             </span>
-            <span className="text-slate-500">
+            <span className="text-white/70">
               {typeCount('monster')} monster · {typeCount('spell')} sihir · {typeCount('relic')} relik · {typeCount('trap')} jebakan · {typeCount('field')} medan
             </span>
           </div>
@@ -157,29 +157,29 @@ export default function DeckBuilder({ onBack }) {
           <div className="flex h-8 items-end gap-1">
             {curve.map((n, i) => (
               <div key={i} className="flex h-full flex-1 flex-col items-center justify-end">
-                <div className="w-full rounded-t bg-indigo-400/70" style={{ height: `${(n / maxCurve) * 100}%`, minHeight: n ? 2 : 0 }} />
+                <div className="w-full rounded-t bg-yellow-300" style={{ height: `${(n / maxCurve) * 100}%`, minHeight: n ? 2 : 0 }} />
               </div>
             ))}
           </div>
-          <div className="-mt-1 flex gap-1 text-center text-[9px] text-slate-500">
+          <div className="-mt-1 flex gap-1 text-center text-[9px] text-white/70">
             {curve.map((_, i) => (
               <span key={i} className="flex-1">{i === 7 ? '7+' : i}</span>
             ))}
           </div>
 
-          <div className="min-h-[7rem] flex-1 overflow-y-auto rounded-lg border border-white/[0.06] bg-white/[0.02] p-1">
-            {sorted.length === 0 && <p className="p-4 text-center text-xs text-slate-500">Ketuk kartu di koleksi untuk menambah, atau pakai “Isi otomatis”.</p>}
+          <div className="tcg-strip min-h-[7rem] flex-1 overflow-y-auto !p-1">
+            {sorted.length === 0 && <p className="p-4 text-center text-xs text-white/70">Ketuk kartu di koleksi untuk menambah, atau pakai “Isi otomatis”.</p>}
             {sorted.map((id) => {
               const c = CARDS[id];
               return (
                 <div key={id} className="flex items-center gap-1">
-                  <button onClick={() => remove(id)} className="flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2 py-1 text-left text-sm hover:bg-white/10">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/15 text-[11px] font-semibold text-slate-200">{c.cost}</span>
-                    <span className="flex-1 truncate" style={{ color: RARITY[c.rarity].color }}>{c.name}</span>
+                  <button onClick={() => remove(id)} className="flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1 text-left text-sm hover:bg-white/15">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/50 bg-black/30 text-[11px] font-bold text-white">{c.cost}</span>
+                    <span className="flex-1 truncate font-semibold" style={{ color: RARITY[c.rarity].color }}>{c.name}</span>
                     <i className="h-2 w-2 shrink-0 rounded-full" style={{ background: ELEMENTS[c.element].color }} />
-                    <span className="w-6 text-right font-bold">×{counts[id]}</span>
+                    <span className="w-6 text-right font-extrabold">×{counts[id]}</span>
                   </button>
-                  <button onClick={() => setInfo(id)} className="rounded-full p-1.5 text-slate-400 hover:bg-white/10 hover:text-white" aria-label="Detail">
+                  <button onClick={() => setInfo(id)} className="rounded-full p-1.5 text-white/70 hover:bg-white/15 hover:text-white" aria-label="Detail">
                     <Info size={14} />
                   </button>
                 </div>
@@ -188,7 +188,7 @@ export default function DeckBuilder({ onBack }) {
           </div>
 
           {!check.ok && cur.cards.length > 0 && (
-            <ul className="space-y-0.5 rounded-lg bg-orange-500/10 p-2 text-[11px] text-orange-200">
+            <ul className="space-y-0.5 rounded-md border border-yellow-300/40 bg-black/40 p-2 text-[11px] text-yellow-200">
               {check.errors.slice(0, 3).map((e) => <li key={e}>• {e}</li>)}
             </ul>
           )}
@@ -197,11 +197,11 @@ export default function DeckBuilder({ onBack }) {
             <select
               value=""
               onChange={(e) => e.target.value && fill(e.target.value)}
-              className="chip flex-1 bg-[#151a23] !py-2"
+              className="tcg-select flex-1 !py-2"
             >
               <option value="">Isi otomatis…</option>
               {ELEMENT_LIST.map((e) => (
-                <option key={e.id} value={e.id}>{e.name}</option>
+                <option key={e.id} value={e.id} className="text-black">{e.name}</option>
               ))}
             </select>
             <button className="btn btn-sm" onClick={() => setCur((d) => ({ ...d, cards: [] }))} title="Kosongkan">
@@ -228,7 +228,7 @@ export default function DeckBuilder({ onBack }) {
 
       {toast && (
         <div className="pointer-events-none fixed inset-x-0 bottom-6 z-50 flex justify-center px-4">
-          <div className="rounded-full border border-white/15 bg-[#0f1218]/95 px-4 py-2 text-sm shadow-xl">{toast}</div>
+          <div className="panel !rounded-full px-4 py-2 text-sm font-bold">{toast}</div>
         </div>
       )}
       <AnimatePresence>{info && <CardModal id={info} onClose={() => setInfo(null)} />}</AnimatePresence>

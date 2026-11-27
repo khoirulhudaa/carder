@@ -69,7 +69,7 @@ export default function Fusion({ onBack }) {
   return (
     <div className="flex h-[100dvh] flex-col">
       <Header title="Fusi Skill" onBack={onBack} />
-      <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-8xl flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
         <p className="text-sm text-slate-400">
           Kumpulkan <b className="text-white">{FUSE_COPIES} salinan</b> kartu yang sama, lalu ambil skill/efek dari kartu <b className="text-white">Biasa atau Langka</b> milikmu.
           Hasilnya satu kartu baru: stat kartu dasar dengan skill/efek donor. {FUSE_COPIES} salinan kartu dasar akan terpakai, kartu donor tidak.

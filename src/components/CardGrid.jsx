@@ -1,28 +1,29 @@
+import clsx from 'clsx';
 import { Info } from 'lucide-react';
-import Card, { SIZE } from './Card.jsx';
+import Card from './Card.jsx';
 
-// items: [{ id, badge?, dim? }]
-export default function CardGrid({ items, onPick, onInfo, size = 'grid', empty = 'Tidak ada kartu.' }) {
-  if (!items.length) return <p className="py-10 text-center text-sm text-slate-400">{empty}</p>;
+/* Grid kartu ala "Card Library" TCG Live: bingkai kuning + lencana jumlah putih.
+   items: [{ id, badge, dim }]   onPick(id)   onInfo(id) */
+export default function CardGrid({ items, onPick, onInfo }) {
   return (
-    <div className="flex flex-wrap justify-between gap-x-2 gap-y-8 pb-6 pt-2">
+    <div className="grid grid-cols-2 gap-x-3 gap-y-5 p-3 pb-6 min-[420px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
       {items.map((it) => (
-        <div key={it.id} className={`relative ${SIZE[size]}`}>
-          <Card id={it.id} size={size} dim={it.dim} onClick={onPick ? () => onPick(it.id) : () => onInfo?.(it.id)} className="hover:-translate-y-1" />
-          {it.badge != null && (
-            <span className="absolute -right-1.5 -top-2 z-10 flex h-6 min-w-[1.5rem] items-center justify-center rounded-full border border-white/20 bg-[#0d1017] px-1 text-xs font-semibold text-white">
-              {it.badge}
-            </span>
-          )}
-          {onInfo && onPick && (
-            <button
-              onClick={(e) => { e.stopPropagation(); onInfo(it.id); }}
-              className="absolute right-[0.6em] top-[2.7em] z-10 flex h-6 w-6 items-center justify-center rounded-full bg-[#0d1017]/90 text-white/80 ring-1 ring-white/15 hover:text-white"
-              aria-label="Lihat detail"
-            >
-              <Info size={14} />
-            </button>
-          )}
+        <div key={it.id} className="group relative flex justify-center">
+          <div className={clsx('tcg-cardframe w-full max-w-[150px] transition', it.dim && 'is-dim', onPick && 'cursor-pointer hover:-translate-y-1')}>
+            <div className="[&>*]:!w-full" onClick={() => onPick && onPick(it.id)}>
+              <Card id={it.id} size="md" className="!text-[11px] sm:!text-[12px]" />
+            </div>
+            {it.badge != null && <span className="tcg-count">{it.badge}</span>}
+            {onInfo && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onInfo(it.id); }}
+                aria-label="Detail"
+                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-white opacity-90 transition hover:bg-black/80"
+              >
+                <Info size={13} />
+              </button>
+            )}
+          </div>
         </div>
       ))}
     </div>

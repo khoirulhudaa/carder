@@ -29,48 +29,40 @@ import { useStore } from '../store/useStore.js';
 /* ------------------------------------------------------------------ */
 /*  Komponen kecil                                                    */
 /* ------------------------------------------------------------------ */
+
+// Label pemain bergaya TCG Live: bilah hexagon (biru = kamu, merah = lawan) + LP + energi
 function PlayerBar({ g, side, floats, flash, active }) {
   const p = g.players[side];
-  const pct = Math.max(0, (p.lp / START_LP) * 100);
+  const pct = Math.max(0, Math.min(100, (p.lp / START_LP) * 100));
+  const me = side === 'player';
   return (
-    <div
-      data-fx={`${side}:lp`}
-      className={clsx(
-        'relative flex items-center gap-2.5 rounded-xl border bg-[#0f1218]/90 px-2.5 py-1.5 transition',
-        active ? 'border-indigo-300/45' : 'border-white/[0.08]',
-        flash && `fx-${flash}`,
-      )}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-          <span className="min-w-0 truncate text-xs font-semibold sm:text-sm">{g.names[side]}</span>
-          <div className="ml-auto flex items-center gap-2.5 text-[10px] text-slate-300 sm:text-xs">
-            <span className="flex items-center gap-[2px]" title="Energi">
-              {Array.from({ length: MAX_MANA }).map((_, i) => (
-                <span
-                  key={i}
-                  className={clsx(
-                    'h-2 w-2 rounded-full border sm:h-2.5 sm:w-2.5',
-                    i < p.mana ? 'border-indigo-300 bg-indigo-400' : i < p.maxMana ? 'border-indigo-400/60 bg-transparent' : 'border-white/10 bg-white/5',
-                  )}
-                />
-              ))}
-              <b className="ml-1 tabular-nums">{p.mana}/{p.maxMana}</b>
-            </span>
-            <span className="flex items-center gap-1" title="Deck">
-              <Layers size={11} /> {p.deck.length}
-            </span>
-            <span className="flex items-center gap-1" title="Tangan">
-              <Hand size={11} /> {p.hand.length}
-            </span>
-          </div>
-          <span className="font-display text-sm font-extrabold tabular-nums sm:text-base">
-            {p.lp} <span className="text-[10px] font-normal text-slate-400">LP</span>
+    <div data-fx={`${side}:lp`} className={clsx('relative flex items-center gap-2 rounded-md', flash && `fx-${flash}`)}>
+      <div className={clsx('tcg-hex-tag min-w-0 flex-1 flex-col !items-stretch !gap-0.5 !py-1', me ? 'is-me' : 'is-foe', active && 'brightness-125')}>
+        <div className="flex items-center gap-2">
+          <span className="min-w-0 truncate text-xs font-extrabold sm:text-sm">{g.names[side]}</span>
+          <span className="ml-auto text-sm font-black tabular-nums sm:text-base">
+            {p.lp} <span className="text-[10px] font-bold opacity-80">LP</span>
           </span>
         </div>
-        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <motion.div className="h-full bg-rose-400/90" animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }} />
+        <div className="h-1.5 overflow-hidden rounded-full bg-black/40">
+          <motion.div className="h-full bg-gradient-to-r from-yellow-200 to-yellow-400" animate={{ width: `${pct}%` }} transition={{ duration: 0.5 }} />
         </div>
+      </div>
+      <div className="flex shrink-0 items-center gap-2 rounded-full border border-white/30 bg-black/50 px-2.5 py-1 text-[10px] text-white sm:text-xs">
+        <span className="flex items-center gap-[2px]" title="Energi">
+          {Array.from({ length: MAX_MANA }).map((_, i) => (
+            <span
+              key={i}
+              className={clsx(
+                'h-2 w-2 rounded-full border sm:h-2.5 sm:w-2.5',
+                i < p.mana ? 'border-yellow-100 bg-yellow-300' : i < p.maxMana ? 'border-yellow-300/70 bg-transparent' : 'border-white/20 bg-white/10',
+              )}
+            />
+          ))}
+          <b className="ml-1 tabular-nums">{p.mana}/{p.maxMana}</b>
+        </span>
+        <span className="flex items-center gap-1" title="Deck"><Layers size={11} /> {p.deck.length}</span>
+        <span className="flex items-center gap-1" title="Tangan"><Hand size={11} /> {p.hand.length}</span>
       </div>
       <Floats items={floats} />
     </div>
@@ -81,16 +73,16 @@ function Strip({ g, side, onInspect }) {
   const p = g.players[side];
   const fieldCard = p.field ? CARDS[p.field.id] : null;
   return (
-    <div className="flex items-center justify-between gap-2 px-1 text-[10px] lg:text-xs">
+    <div className="flex items-center justify-between gap-2 px-1 text-[10px] text-white lg:text-xs">
       <button
-        className={clsx('chip !px-2 !py-0.5', !fieldCard && 'opacity-30')}
+        className={clsx('chip !px-3 !py-0.5', !fieldCard && 'opacity-40')}
         onClick={() => fieldCard && onInspect({ cardId: fieldCard.id })}
         onMouseEnter={() => fieldCard && onInspect({ cardId: fieldCard.id }, true)}
       >
         {fieldCard ? fieldCard.name : 'Medan —'}
       </button>
       <div className="flex items-center gap-1">
-        <span className="text-slate-500">Jebakan</span>
+        <span className="font-bold text-white/80">Jebakan</span>
         {p.traps.map((t, i) => (
           <button
             key={i}
@@ -98,7 +90,7 @@ function Strip({ g, side, onInspect }) {
             onClick={() => t && side === 'player' && onInspect({ cardId: t.id })}
             className={clsx(
               'flex h-6 w-5 items-center justify-center rounded border text-[11px] lg:h-7 lg:w-6',
-              t ? 'border-indigo-300/50 bg-indigo-400/15' : 'border-white/10 bg-white/5 opacity-40',
+              t ? 'border-yellow-300 bg-yellow-300/25' : 'border-white/30 bg-black/30 opacity-60',
             )}
             title={t ? (side === 'player' ? CARDS[t.id].name : 'Jebakan tertutup') : 'Kosong'}
           >
@@ -129,7 +121,7 @@ function Slot({ g, side, slot, sel, mode, floats, flash, attacking, onClick, onH
           onHover={(v) => onHover(v ? { ...v, slot } : null)}
         />
       ) : (
-        <div className="absolute inset-0 rounded-[0.7em] border border-dashed border-white/10 bg-white/[0.02]" />
+        <div className="absolute inset-0 rounded-[0.7em] border border-dashed border-white/25 bg-black/20" />
       )}
       <Floats items={floats.filter((f) => f.key === key)} />
     </div>
@@ -151,13 +143,13 @@ function InstanceInfo({ g, side, slot }) {
   if (m.acted) flags.push('Sudah beraksi');
   m.equips.forEach((r) => flags.push(`Relik: ${CARDS[r].name}`));
   return (
-    <div className="space-y-1 rounded-lg border border-white/[0.07] bg-white/[0.03] p-2 text-xs">
+    <div className="space-y-1 rounded-md border border-white/25 bg-black/35 p-2 text-xs">
       <div className="flex justify-between font-bold">
-        <span className={st.atk > d.atk ? 'text-emerald-300' : 'text-white'}>ATK {st.atk}</span>
-        <span className={st.def > d.def ? 'text-emerald-300' : 'text-white'}>DEF {st.def}</span>
+        <span className={st.atk > d.atk ? 'text-green-300' : 'text-white'}>ATK {st.atk}</span>
+        <span className={st.def > d.def ? 'text-green-300' : 'text-white'}>DEF {st.def}</span>
         <span className="text-white">HP {m.hp}/{m.maxHp}</span>
       </div>
-      {flags.length > 0 && <p className="text-slate-300">{flags.join(' · ')}</p>}
+      {flags.length > 0 && <p className="text-white/80">{flags.join(' · ')}</p>}
     </div>
   );
 }
@@ -176,8 +168,6 @@ function Btn({ children, onClick, primary, danger, disabled, className }) {
 
 /* ------------------------------------------------------------------ */
 /*  Kartu Hadiah (ala Pokémon TCG)                                    */
-/*  Sebelum duel, tiap pemain menyisihkan PRIZE_COUNT kartu dari deck. */
-/*  Monster lawan hancur -> ambil 1 hadiah (monster GX/EX = 2).        */
 /* ------------------------------------------------------------------ */
 const PRIZE_COUNT = 3;
 const PRIZE_TAGS = ['GX', 'EX'];
@@ -199,7 +189,6 @@ function giveToHand(g, side, cards) {
   return { ...g, players: { ...g.players, [side]: { ...p, hand: [...p.hand, ...cards] } } };
 }
 
-// Bandingkan state sebelum & sesudah aksi: monster yang lenyap (bukan kembali ke tangan) = hancur.
 function countKills(prev, next) {
   const out = { player: { n: 0, names: [] }, enemy: { n: 0, names: [] } };
   ['player', 'enemy'].forEach((owner) => {
@@ -211,7 +200,7 @@ function countKills(prev, next) {
       if (!m) return;
       const n = nm[slot];
       if (n && n.id === m.id && (n.uid == null || n.uid === m.uid)) return;
-      if (countIn(next.players[owner].hand, m.id) > countIn(prev.players[owner].hand, m.id)) return; // bounce
+      if (countIn(next.players[owner].hand, m.id) > countIn(prev.players[owner].hand, m.id)) return;
       const d = CARDS[m.id];
       if (!d || d.token) return;
       out[taker].n += PRIZE_TAGS.includes(d.tag) ? 2 : 1;
@@ -221,11 +210,12 @@ function countKills(prev, next) {
   return out;
 }
 
+// Tumpukan hadiah: punggung kartu biru bergaya TCG Live
 function PrizePile({ cards, pending, mine, onTake }) {
   const canTake = mine && pending > 0;
   return (
     <div className="flex shrink-0 flex-col items-center gap-1" title="Kartu Hadiah">
-      <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500">Hadiah</span>
+      <span className="rounded bg-black/45 px-1.5 text-[9px] font-extrabold uppercase tracking-wider text-white">Hadiah</span>
       <div className="flex flex-col gap-1">
         {Array.from({ length: PRIZE_COUNT }).map((_, i) => {
           const c = cards[i];
@@ -236,18 +226,18 @@ function PrizePile({ cards, pending, mine, onTake }) {
               onClick={() => onTake(i)}
               aria-label="Ambil kartu hadiah"
               className={clsx(
-                'relative h-8 w-6 rounded-[4px] border bg-gradient-to-br from-indigo-400/50 to-indigo-900/70 transition sm:h-9 sm:w-[26px]',
-                canTake ? 'animate-pulse cursor-pointer border-amber-300 shadow-[0_0_8px_rgba(252,211,77,.7)] hover:-translate-y-0.5' : 'border-white/15',
+                'relative h-8 w-6 rounded-[4px] border-2 bg-gradient-to-br from-sky-300 to-blue-900 transition sm:h-9 sm:w-[26px]',
+                canTake ? 'animate-pulse cursor-pointer border-yellow-300 shadow-[0_0_10px_rgba(253,224,71,.9)] hover:-translate-y-0.5' : 'border-white/70',
               )}
             >
-              <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white/70">★</span>
+              <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white/90">★</span>
             </button>
           ) : (
-            <div key={`e${i}`} className="h-8 w-6 rounded-[4px] border border-dashed border-white/10 sm:h-9 sm:w-[26px]" />
+            <div key={`e${i}`} className="h-8 w-6 rounded-[4px] border border-dashed border-white/30 sm:h-9 sm:w-[26px]" />
           );
         })}
       </div>
-      {canTake && <span className="text-[10px] font-bold text-amber-300">Ambil {pending}</span>}
+      {canTake && <span className="rounded bg-yellow-300 px-1.5 text-[10px] font-black text-slate-900">Ambil {pending}</span>}
     </div>
   );
 }
@@ -255,14 +245,9 @@ function PrizePile({ cards, pending, mine, onTake }) {
 /* ------------------------------------------------------------------ */
 /*  Layar duel                                                        */
 /* ------------------------------------------------------------------ */
-// Skala tile mengikuti tinggi layar supaya 2 baris monster + bar + tangan selalu muat
-// tanpa scroll. Kalau --u sudah kamu atur di CSS, hapus properti style pada <main>.
 const BOARD_UNIT = 'clamp(5px, calc((100dvh - 300px) / 23), min(11px, 1.6vw))';
-// Mobile: tangan disimpan di bottom sheet, jadi ruang vertikal lebih lega dan tile bisa lebih besar.
-// Dibatasi tinggi layar dan lebar layar (3 tile + tumpukan hadiah + jarak harus muat).
-const BOARD_UNIT_MOBILE = 'clamp(5px, min(calc((100dvh - 250px) / 23), calc((100vw - 100px) / 27)), 12px)';
+const BOARD_UNIT_MOBILE = 'clamp(5px, min(calc((100dvh - 250px) / 23), calc((100vw - 120px) / 29)), 12px)';
 
-// true kalau layar < 1024px (di bawah breakpoint `lg`)
 function useIsMobile() {
   const query = '(max-width: 1023px)';
   const [m, setM] = useState(() => typeof matchMedia !== 'undefined' && matchMedia(query).matches);
@@ -314,10 +299,9 @@ export default function Duel({ config, onExit, onRematch }) {
   const isMobile = useIsMobile();
   const mobileRef = useRef(isMobile);
   mobileRef.current = isMobile;
-  const [showHand, setShowHand] = useState(false); // bottom sheet daftar kartu (mobile)
+  const [showHand, setShowHand] = useState(false);
 
   /* ---------- efek visual ---------- */
-  // karakter kartu muncul dari pinggir layar (maks. 2 sekaligus)
   const pushCut = useCallback((item) => {
     if (!item.cardId || mobileRef.current) return;
     if (typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches) return;
@@ -390,7 +374,6 @@ export default function Duel({ config, onExit, onRematch }) {
       let next = reduce(prev, a);
       if (a.type === 'TOGGLE') sfxx.toggle(next.players[a.side]?.monsters[a.slot]?.pos);
 
-      // hadiah: monster lawan hancur -> pelaku mengambil hadiah (AI otomatis, pemain memilih sendiri)
       const earned = next.winner ? { player: { n: 0, names: [] }, enemy: { n: 0, names: [] } } : countKills(prev, next);
       const prizeLog = [];
       ['player', 'enemy'].forEach((side) => {
@@ -437,7 +420,6 @@ export default function Duel({ config, onExit, onRematch }) {
     [processFx, addFloat],
   );
 
-  // pemain memilih kartu hadiah (tertutup) untuk diambil ke tangan
   const takePrize = (idx) => {
     if (pendingRef.current.player <= 0) return;
     const list = prizesRef.current.player;
@@ -479,7 +461,6 @@ export default function Duel({ config, onExit, onRematch }) {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [g.log.length, showLog]);
 
-  // sidebar kanan tanpa scroll: bagian paling atas terpotong, entri terbaru selalu terlihat
   const rightRef = useRef(null);
   const stickLog = useCallback(() => {
     const r = rightRef.current;
@@ -498,7 +479,7 @@ export default function Duel({ config, onExit, onRematch }) {
   const me = g.players.player;
   const myTurn = g.active === 'player' && !g.winner;
 
-  /* ---------- tangan: paginasi panah (tanpa scroll) ---------- */
+  /* ---------- tangan: paginasi panah ---------- */
   const handBox = useRef(null);
   const stepRef = useRef(0);
   const [perPage, setPerPage] = useState(7);
@@ -515,7 +496,7 @@ export default function Duel({ config, onExit, onRematch }) {
       if (items.length >= 2) stepRef.current = items[1].offsetLeft - items[0].offsetLeft;
       else if (!stepRef.current) stepRef.current = w;
       const step = stepRef.current || w || 80;
-      const avail = box.clientWidth - 2 * 40 - 24; // dua tombol panah + padding
+      const avail = box.clientWidth - 2 * 40 - 24;
       setPerPage(Math.max(1, Math.floor((avail - w) / step) + 1));
     };
     calc();
@@ -584,14 +565,14 @@ export default function Duel({ config, onExit, onRematch }) {
     return whyCannotAct(g, 'player', slot) || '';
   }
 
-  /* ---------- tombol aksi (dipakai desktop & mobile) ---------- */
+  /* ---------- tombol aksi ---------- */
   function renderActions() {
     if (!selInfo) return null;
-    if (!myTurn) return <p className="text-xs text-slate-400">Menunggu giliranmu…</p>;
+    if (!myTurn) return <p className="text-xs text-white/80">Menunggu giliranmu…</p>;
     if (mode) {
       return (
         <div className="space-y-2">
-          <p className="rounded-lg bg-rose-500/15 p-2 text-center text-xs font-semibold text-rose-200">
+          <p className="rounded-md bg-red-600/40 p-2 text-center text-xs font-bold text-white">
             {mode.valid.length ? 'Ketuk target yang menyala merah' : 'Tidak ada target'}
           </p>
           <Btn onClick={cancel}><X size={14} /> Batal</Btn>
@@ -601,7 +582,7 @@ export default function Duel({ config, onExit, onRematch }) {
     if (selInfo.kind === 'hand') {
       const d = CARDS[selInfo.cardId];
       const chk = canPlayCard(g, 'player', selInfo.card.uid);
-      if (!chk.ok) return <p className="text-xs font-semibold text-rose-300">{chk.reason}</p>;
+      if (!chk.ok) return <p className="text-xs font-bold text-yellow-300">{chk.reason}</p>;
       if (d.type === 'monster') {
         return (
           <div className="grid grid-cols-2 gap-2">
@@ -634,7 +615,7 @@ export default function Duel({ config, onExit, onRematch }) {
               <Swords size={15} /> {targets[0] === 'direct' ? 'Serang Langsung!' : 'Serang'}
             </Btn>
           ) : (
-            <p className="col-span-2 text-xs text-slate-400">{attackReason(slot)}</p>
+            <p className="col-span-2 text-xs text-white/80">{attackReason(slot)}</p>
           )}
           {d.skill && (
             <Btn
@@ -644,7 +625,7 @@ export default function Duel({ config, onExit, onRematch }) {
               {d.skill.name} · {d.skill.cost} energi
             </Btn>
           )}
-          {d.skill && !sc.ok && <p className="col-span-2 text-[11px] text-slate-400">Skill: {sc.reason}</p>}
+          {d.skill && !sc.ok && <p className="col-span-2 text-[11px] text-white/80">Skill: {sc.reason}</p>}
           <Btn className={atkOk === !!d.skill ? 'col-span-2' : ''} disabled={inst.acted} onClick={() => act({ type: 'TOGGLE', side: 'player', slot })}>
             {inst.pos === 'atk' ? 'Ganti ke bertahan' : 'Ganti ke serang'}
           </Btn>
@@ -657,173 +638,185 @@ export default function Duel({ config, onExit, onRematch }) {
   const playable = myTurn ? me.hand.filter((c) => canPlayCard(g, 'player', c.uid).ok).length : 0;
   const lines = shownId ? describeCard(CARDS[shownId]) : [];
 
+  const statusText = mode
+    ? 'Pilih target…'
+    : (() => { const l = [...detail].reverse().find((x) => x.kind !== 'giliran'); return l ? l.text : ''; })();
+
+  const renderLane = (side) => (
+    <div className="flex items-center justify-center gap-2 sm:gap-4">
+      <PrizePile cards={prizes[side]} pending={side === 'player' ? pending.player : 0} mine={side === 'player'} onTake={takePrize} />
+      <div className="duel-lane flex gap-2 p-2 sm:gap-3">
+        {[0, 1, 2].map((s) => (
+          <Slot
+            key={s} g={g} side={side} slot={s} sel={sel} mode={mode} floats={floats} flash={flash} attacking={attacking} onClick={onTile}
+            onHover={(v) => setHover(v ? { ...v, cardId: g.players[side].monsters[s]?.id, side, slot: s } : null)}
+          />
+        ))}
+      </div>
+      <div className="w-6 shrink-0" aria-hidden />
+    </div>
+  );
+
   /* ---------- tampilan ---------- */
   return (
-    <div className="no-select flex h-[100dvh] w-full overflow-hidden overscroll-none">
+    <div className="no-select duel-root relative flex h-[100dvh] w-full overflow-hidden overscroll-none">
       {/* panel kiri (desktop): detail kartu & aksi */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-white/[0.07] bg-[#0a0c11]/80 lg:flex xl:w-72">
+      <aside className="relative z-[2] hidden w-64 shrink-0 flex-col border-r-2 border-cyan-400/50 bg-[#0a1c4a]/90 lg:flex xl:w-72">
         <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3">
           {shownId ? (
             <>
-              {/* kartu selebar panel (1em kartu = 1/10 lebar panel) */}
               <div className="flex justify-center">
-                <Card id={shownId} size="lg" className="!text-[23px] xl:!text-[26px]" />
+                <div className="tcg-cardframe">
+                  <Card id={shownId} size="lg" className="!text-[21px] xl:!text-[24px]" />
+                </div>
               </div>
 
-              {/* ringkasan */}
               <div className="flex flex-wrap gap-1.5 text-[11px]">
                 {[
                   `Biaya ${CARDS[shownId].cost}`,
                   ELEMENTS[CARDS[shownId].element]?.name,
                   RARITY[CARDS[shownId].rarity]?.name,
                 ].filter(Boolean).map((t) => (
-                  <span key={t} className="rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-slate-300">{t}</span>
+                  <span key={t} className="rounded-full border border-white/30 bg-black/30 px-2 py-0.5 font-bold text-white">{t}</span>
                 ))}
               </div>
 
               {shown?.side != null && shown.slot != null && <InstanceInfo g={g} side={shown.side} slot={shown.slot} />}
 
               {lines.length > 0 && (
-                <div className="space-y-1.5 rounded-lg border border-white/[0.07] bg-white/[0.03] p-2.5 text-xs leading-snug">
+                <div className="space-y-1.5 rounded-md border border-white/25 bg-black/35 p-2.5 text-xs leading-snug">
                   {lines.map((l, i) => (
-                    <p key={i}><b className={l.skill ? 'text-violet-300' : 'text-amber-200'}>{l.k}:</b> <span className="text-slate-300">{l.text}</span></p>
+                    <p key={i}><b className={l.skill ? 'text-violet-300' : 'text-yellow-200'}>{l.k}:</b> <span className="text-white/90">{l.text}</span></p>
                   ))}
                 </div>
               )}
               {CARDS[shownId].kw?.length > 0 && (
-                <ul className="space-y-1 text-[11px] leading-snug text-slate-400">
-                  {CARDS[shownId].kw.map((k) => <li key={k}><b className="text-slate-300">{KEYWORDS[k].name}</b>: {KEYWORDS[k].desc}</li>)}
+                <ul className="space-y-1 text-[11px] leading-snug text-white/75">
+                  {CARDS[shownId].kw.map((k) => <li key={k}><b className="text-white">{KEYWORDS[k].name}</b>: {KEYWORDS[k].desc}</li>)}
                 </ul>
               )}
-              {CARDS[shownId].flavor && <p className="text-[11px] italic leading-snug text-slate-500">“{CARDS[shownId].flavor}”</p>}
+              {CARDS[shownId].flavor && <p className="text-[11px] italic leading-snug text-white/60">“{CARDS[shownId].flavor}”</p>}
             </>
           ) : (
-            <p className="rounded-xl border border-dashed border-white/10 p-4 text-center text-xs text-slate-500">
+            <p className="rounded-md border border-dashed border-white/30 p-4 text-center text-xs text-white/70">
               Arahkan kursor atau ketuk kartu untuk melihat detail dan aksi.
             </p>
           )}
 
-          {/* info singkat milik pemain */}
-          <div className="mt-auto flex shrink-0 items-center justify-between gap-2 rounded-lg border border-white/[0.07] bg-white/[0.03] px-2.5 py-2 text-[11px] tabular-nums text-slate-300">
+          <div className="mt-auto flex shrink-0 items-center justify-between gap-2 rounded-md border border-white/25 bg-black/35 px-2.5 py-2 text-[11px] tabular-nums text-white/90">
             <span>LP <b className="text-white">{me.lp}</b></span>
             <span>Energi <b className="text-white">{me.mana}/{me.maxMana}</b></span>
             <span>Hadiah <b className="text-white">{prizes.player.length}</b></span>
           </div>
 
-          {/* tombol aksi menempel di dasar panel */}
           {shownId && selInfo && <div className="shrink-0 pt-1">{renderActions()}</div>}
         </div>
       </aside>
 
       {/* papan */}
       <main
-        className="duel-main flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-hidden px-2 pb-[max(0.25rem,env(safe-area-inset-bottom))] pt-[max(0.25rem,env(safe-area-inset-top))] sm:px-4 sm:pt-2"
+        className="duel-main flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-hidden pb-[max(0.25rem,env(safe-area-inset-bottom))]"
         style={{ '--u': isMobile ? BOARD_UNIT_MOBILE : BOARD_UNIT }}
       >
-        <PlayerBar g={g} side="enemy" floats={floats.filter((f) => f.key === 'enemy:lp')} flash={flash['enemy:lp']} active={g.active === 'enemy' && !g.winner} />
-        <Strip g={g} side="enemy" onInspect={inspect} />
+        {/* ===== zona lawan (merah) ===== */}
+        <div className="duel-zone is-foe !items-stretch !justify-start gap-1 px-2 pb-3 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4">
+          <PlayerBar g={g} side="enemy" floats={floats.filter((f) => f.key === 'enemy:lp')} flash={flash['enemy:lp']} active={g.active === 'enemy' && !g.winner} />
+          <Strip g={g} side="enemy" onInspect={inspect} />
+          {renderLane('enemy')}
+        </div>
 
-        <div className="flex min-h-0 flex-1 flex-col items-center justify-evenly gap-1">
-          <div className="flex items-center justify-center gap-2 sm:gap-4">
-            <PrizePile cards={prizes.enemy} pending={0} mine={false} onTake={takePrize} />
-            {[0, 1, 2].map((s) => (
-              <Slot key={s} g={g} side="enemy" slot={s} sel={sel} mode={mode} floats={floats} flash={flash} attacking={attacking} onClick={onTile} onHover={(v) => setHover(v ? { ...v, cardId: g.players.enemy.monsters[s]?.id, side: 'enemy', slot: s } : null)} />
-            ))}
-            <div className="w-6 shrink-0" aria-hidden />
-          </div>
-
-          <div className="flex w-full max-w-xl items-center gap-2 py-1">
-            <span className={clsx('chip !px-2', myTurn ? 'chip-on' : '')}>Giliran {g.turn} · {g.active === 'player' ? 'Kamu' : 'Lawan'}</span>
+        {/* ===== garis tengah: giliran + End Turn ===== */}
+        <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-2 sm:px-4">
+          <div className="flex w-full max-w-3xl items-center gap-2">
+            <span className={clsx('tcg-hex-tag shrink-0 text-[11px] sm:text-xs', g.active === 'player' ? 'is-me' : 'is-foe')}>
+              Giliran {g.turn} · {g.active === 'player' ? 'Kamu' : 'Lawan'}
+            </span>
             <div
-              className={clsx('min-w-0 flex-1 truncate text-center text-[11px] sm:text-xs', mode ? 'font-semibold text-rose-200' : 'text-slate-400')}
+              className={clsx('min-w-0 flex-1 truncate rounded bg-black/55 px-2 py-1 text-center text-[11px] sm:text-xs', mode ? 'font-bold text-yellow-200' : 'text-white')}
               title={detail.length ? detail[detail.length - 1].text : ''}
             >
-              {mode ? 'Pilih target…' : (() => { const l = [...detail].reverse().find((x) => x.kind !== 'giliran'); return l ? l.text : ''; })()}
+              {statusText}
             </div>
             <button className="btn btn-sm !px-2 lg:hidden" onClick={() => setShowLog(true)} aria-label="Catatan"><ScrollText size={14} /></button>
-            <button className="btn btn-sm !px-2" onClick={() => setConfirmQuit(true)} aria-label="Menyerah"><Flag size={14} /></button>
+            <button className="btn btn-sm btn-danger !px-2" onClick={() => setConfirmQuit(true)} aria-label="Menyerah"><Flag size={14} /></button>
             <button
-              className={clsx('btn btn-sm', myTurn && !mode && 'btn-primary')}
+              className={clsx('tcg-endturn shrink-0', myTurn && !mode && 'is-ready')}
               disabled={!myTurn}
               onClick={() => { sfx.click(); act({ type: 'END_TURN', side: 'player' }); }}
             >
-              Akhiri Giliran
+              End<br />Turn
+            </button>
+          </div>
+        </div>
+
+        {/* ===== zona kamu (biru) ===== */}
+        <div className="duel-zone is-me !items-stretch !justify-start gap-1 px-2 pt-3 sm:px-4">
+          {renderLane('player')}
+          <Strip g={g} side="player" onInspect={inspect} />
+          <PlayerBar g={g} side="player" floats={floats.filter((f) => f.key === 'player:lp')} flash={flash['player:lp']} active={myTurn} />
+
+          {/* tangan (desktop): panah kiri/kanan */}
+          <div ref={handBox} className="hidden shrink-0 items-center justify-center gap-1 pb-1 pt-2 lg:flex">
+            <button
+              className="btn btn-sm !h-9 !w-9 shrink-0 !p-0 disabled:opacity-20"
+              disabled={page <= 0}
+              onClick={() => setHandPage(page - 1)}
+              aria-label="Kartu sebelumnya"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <div className="flex min-w-0 flex-col items-center">
+              <div data-hand-row className="flex w-max gap-2 px-3 sm:gap-3">
+                {visibleHand.map((c) => {
+                  const ok = myTurn && canPlayCard(g, 'player', c.uid).ok;
+                  const on = sel?.kind === 'hand' && sel.uid === c.uid;
+                  return (
+                    <div
+                      key={c.uid}
+                      className={clsx('transition-[filter,transform] duration-150', on ? '-translate-y-3 z-10' : 'hover:z-10 hover:brightness-125')}
+                      onMouseEnter={() => setHover({ cardId: c.id })}
+                      onMouseLeave={() => setHover(null)}
+                    >
+                      <Card
+                        id={c.id}
+                        size="hand"
+                        selected={on}
+                        dim={!ok}
+                        onClick={() => { sfx.click(); setMode(null); setSel(on ? null : { kind: 'hand', uid: c.uid }); }}
+                      />
+                    </div>
+                  );
+                })}
+                {me.hand.length === 0 && <p className="px-6 py-8 text-sm text-white/80">Tanganmu kosong</p>}
+              </div>
+            </div>
+
+            <button
+              className="btn btn-sm !h-9 !w-9 shrink-0 !p-0 disabled:opacity-20"
+              disabled={page >= handPages - 1}
+              onClick={() => setHandPage(page + 1)}
+              aria-label="Kartu berikutnya"
+            >
+              <ChevronRight size={18} />
             </button>
           </div>
 
-          <div className="flex items-center justify-center gap-2 sm:gap-4">
-            <PrizePile cards={prizes.player} pending={pending.player} mine onTake={takePrize} />
-            {[0, 1, 2].map((s) => (
-              <Slot key={s} g={g} side="player" slot={s} sel={sel} mode={mode} floats={floats} flash={flash} attacking={attacking} onClick={onTile} onHover={(v) => setHover(v ? { ...v, cardId: g.players.player.monsters[s]?.id, side: 'player', slot: s } : null)} />
-            ))}
-            <div className="w-6 shrink-0" aria-hidden />
+          {/* tangan (mobile): tombol pembuka bottom sheet */}
+          <div className="shrink-0 pb-1 pt-1 lg:hidden">
+            <button className="btn w-full !py-3 text-sm" onClick={() => { sfx.click(); setShowHand(true); }}>
+              <Hand size={16} /> Lihat kartu
+              <span className="rounded-full bg-black/35 px-2 py-0.5 text-xs tabular-nums">{me.hand.length}</span>
+              {playable > 0 && (
+                <span className="rounded-full bg-green-400/30 px-2 py-0.5 text-[11px] font-bold text-green-100">{playable} bisa dimainkan</span>
+              )}
+            </button>
           </div>
-        </div>
-
-        <Strip g={g} side="player" onInspect={inspect} />
-        <PlayerBar g={g} side="player" floats={floats.filter((f) => f.key === 'player:lp')} flash={flash['player:lp']} active={myTurn} />
-
-        {/* tangan: tombol panah kiri/kanan, tanpa scroll */}
-        <div ref={handBox} className="hidden shrink-0 items-center justify-center gap-1 pb-1 pt-3 lg:flex">
-          <button
-            className="btn btn-sm !h-9 !w-9 shrink-0 !p-0 disabled:opacity-20"
-            disabled={page <= 0}
-            onClick={() => setHandPage(page - 1)}
-            aria-label="Kartu sebelumnya"
-          >
-            <ChevronLeft size={18} />
-          </button>
-
-          <div className="flex min-w-0 flex-col items-center">
-            <div data-hand-row className="flex w-max gap-2 px-3 sm:gap-3">
-              {visibleHand.map((c) => {
-                const ok = myTurn && canPlayCard(g, 'player', c.uid).ok;
-                const on = sel?.kind === 'hand' && sel.uid === c.uid;
-                return (
-                  <div
-                    key={c.uid}
-                    className={clsx('transition-[filter,transform] duration-150', on ? '-translate-y-3 z-10' : 'hover:z-10 hover:brightness-125')}
-                    onMouseEnter={() => setHover({ cardId: c.id })}
-                    onMouseLeave={() => setHover(null)}
-                  >
-                    <Card
-                      id={c.id}
-                      size="hand"
-                      selected={on}
-                      dim={!ok}
-                      onClick={() => { sfx.click(); setMode(null); setSel(on ? null : { kind: 'hand', uid: c.uid }); }}
-                    />
-                  </div>
-                );
-              })}
-              {me.hand.length === 0 && <p className="px-6 py-8 text-sm text-slate-500">Tanganmu kosong</p>}
-            </div>
-          </div>
-
-          <button
-            className="btn btn-sm !h-9 !w-9 shrink-0 !p-0 disabled:opacity-20"
-            disabled={page >= handPages - 1}
-            onClick={() => setHandPage(page + 1)}
-            aria-label="Kartu berikutnya"
-          >
-            <ChevronRight size={18} />
-          </button>
-        </div>
-
-        {/* tangan (mobile): tombol pembuka bottom sheet */}
-        <div className="shrink-0 pb-1 pt-1 lg:hidden">
-          <button className="btn w-full !py-3 text-sm" onClick={() => { sfx.click(); setShowHand(true); }}>
-            <Hand size={16} /> Lihat kartu
-            <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs tabular-nums">{me.hand.length}</span>
-            {playable > 0 && (
-              <span className="rounded-full bg-emerald-400/20 px-2 py-0.5 text-[11px] font-semibold text-emerald-300">{playable} bisa dimainkan</span>
-            )}
-          </button>
         </div>
       </main>
 
       {/* panel kanan (desktop): rincian & catatan duel */}
-      <aside ref={rightRef} onClickCapture={() => requestAnimationFrame(stickLog)} className="hidden w-64 shrink-0 flex-col overflow-hidden border-l border-white/[0.07] bg-[#0a0c11]/80 p-3 lg:flex xl:w-72 [&_*]:!overflow-y-hidden [&_*]:![scrollbar-width:none] [&_*::-webkit-scrollbar]:hidden">
+      <aside ref={rightRef} onClickCapture={() => requestAnimationFrame(stickLog)} className="relative z-[2] hidden w-64 shrink-0 flex-col overflow-hidden border-l-2 border-cyan-400/50 bg-[#0a1c4a]/90 p-3 lg:flex xl:w-72 [&_*]:!overflow-y-hidden [&_*]:![scrollbar-width:none] [&_*::-webkit-scrollbar]:hidden">
         <DuelLog g={g} detail={detail} className="flex-1" />
       </aside>
 
@@ -834,20 +827,20 @@ export default function Duel({ config, onExit, onRematch }) {
             initial={{ y: 200, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 200, opacity: 0 }}
-            className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#0a0c11]/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl backdrop-blur lg:hidden"
+            className="panel fixed inset-x-0 bottom-0 z-30 !rounded-b-none p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
           >
             <button className="btn btn-sm absolute right-2 top-2 !p-1.5" onClick={clearSel} aria-label="Tutup"><X size={14} /></button>
             <div className="flex gap-3">
-              <div className="shrink-0"><Card id={selInfo.cardId} size="md" /></div>
+              <div className="shrink-0"><div className="tcg-cardframe"><Card id={selInfo.cardId} size="md" /></div></div>
               <div className="min-w-0 flex-1 space-y-2">
                 <div>
-                  <p className="pr-8 text-sm font-semibold leading-tight tracking-tight">{CARDS[selInfo.cardId].name}</p>
-                  <p className="text-[11px] text-slate-400">{TYPE_NAMES[CARDS[selInfo.cardId].type]} · {ELEMENTS[CARDS[selInfo.cardId].element].name}</p>
+                  <p className="pr-8 text-sm font-extrabold leading-tight tracking-tight">{CARDS[selInfo.cardId].name}</p>
+                  <p className="text-[11px] text-white/75">{TYPE_NAMES[CARDS[selInfo.cardId].type]} · {ELEMENTS[CARDS[selInfo.cardId].element].name}</p>
                 </div>
                 {selInfo.kind === 'mon' && <InstanceInfo g={g} side={selInfo.side} slot={selInfo.slot} />}
                 <div className="max-h-24 space-y-0.5 overflow-y-auto text-[11px] leading-snug">
                   {describeCard(CARDS[selInfo.cardId]).map((l, i) => (
-                    <p key={i}><b className={l.skill ? 'text-violet-300' : 'text-amber-200'}>{l.k}:</b> {l.text}</p>
+                    <p key={i}><b className={l.skill ? 'text-violet-300' : 'text-yellow-200'}>{l.k}:</b> {l.text}</p>
                   ))}
                 </div>
               </div>
@@ -860,15 +853,15 @@ export default function Duel({ config, onExit, onRematch }) {
             initial={{ y: 80, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: 80, opacity: 0 }}
-            className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t border-rose-400/40 bg-slate-950/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
+            className="fixed inset-x-0 bottom-0 z-30 flex items-center gap-3 border-t-2 border-red-300 bg-red-800/95 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
           >
-            <p className="flex-1 text-sm font-semibold text-rose-200">Ketuk target yang menyala merah</p>
+            <p className="flex-1 text-sm font-bold text-white">Ketuk target yang menyala merah</p>
             <button className="btn btn-sm" onClick={cancel}>Batal</button>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* daftar kartu tangan (mobile): muncul dari bawah layar */}
+      {/* daftar kartu tangan (mobile) */}
       <AnimatePresence>
         {isMobile && showHand && !g.winner && (
           <motion.div
@@ -883,17 +876,17 @@ export default function Duel({ config, onExit, onRematch }) {
         {isMobile && showHand && !g.winner && (
           <motion.div
             key="hand-sheet"
-            className="fixed inset-x-0 bottom-0 z-[35] flex max-h-[78dvh] flex-col rounded-t-2xl border-t border-white/10 bg-[#0a0c11]/95 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-2xl backdrop-blur lg:hidden"
+            className="panel fixed inset-x-0 bottom-0 z-[35] flex max-h-[78dvh] flex-col !rounded-b-none pb-[max(0.75rem,env(safe-area-inset-bottom))] lg:hidden"
             initial={{ y: '100%' }}
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
           >
-            <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-white/20" />
+            <div className="mx-auto mt-2 h-1 w-10 shrink-0 rounded-full bg-white/40" />
             <div className="flex shrink-0 items-center justify-between px-4 py-2">
               <div>
-                <p className="text-sm font-semibold">Tangan <span className="font-normal text-slate-500">· {me.hand.length} kartu</span></p>
-                <p className="text-[11px] text-slate-500">Ketuk kartu untuk melihat aksi</p>
+                <p className="text-sm font-extrabold">Tangan <span className="font-normal text-white/70">· {me.hand.length} kartu</span></p>
+                <p className="text-[11px] text-white/70">Ketuk kartu untuk melihat aksi</p>
               </div>
               <button className="btn btn-sm !p-1.5" onClick={() => setShowHand(false)} aria-label="Tutup"><X size={14} /></button>
             </div>
@@ -913,7 +906,7 @@ export default function Duel({ config, onExit, onRematch }) {
                     />
                   );
                 })}
-                {me.hand.length === 0 && <p className="px-6 py-10 text-sm text-slate-500">Tanganmu kosong</p>}
+                {me.hand.length === 0 && <p className="px-6 py-10 text-sm text-white/80">Tanganmu kosong</p>}
               </div>
             </div>
           </motion.div>
@@ -924,8 +917,8 @@ export default function Duel({ config, onExit, onRematch }) {
       <AnimatePresence>
         {showLog && (
           <motion.div className="fixed inset-0 z-40 flex items-end bg-black/60 lg:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowLog(false)}>
-            <div className="panel flex h-[62dvh] w-full flex-col rounded-b-none p-3 text-xs" onClick={(e) => e.stopPropagation()}>
-              <div className="mb-2 flex shrink-0 items-center justify-between font-semibold"><span>Riwayat duel</span><button onClick={() => setShowLog(false)} aria-label="Tutup"><X size={16} /></button></div>
+            <div className="panel flex h-[62dvh] w-full flex-col !rounded-b-none p-3 text-xs" onClick={(e) => e.stopPropagation()}>
+              <div className="mb-2 flex shrink-0 items-center justify-between font-extrabold"><span>Riwayat duel</span><button onClick={() => setShowLog(false)} aria-label="Tutup"><X size={16} /></button></div>
               <DuelLog g={g} detail={detail} className="flex-1" />
             </div>
           </motion.div>
@@ -947,22 +940,27 @@ export default function Duel({ config, onExit, onRematch }) {
             transition={{ duration: 0.25 }}
           >
             {banner.cardId && isMobile ? (
-              <div className="flex max-w-[92vw] items-center gap-2 rounded-full border border-white/15 bg-[#0a0c11]/90 px-4 py-2 text-xs shadow-2xl backdrop-blur">
+              <div className="panel flex max-w-[92vw] items-center gap-2 !rounded-full px-4 py-2 text-xs">
                 <span className="shrink-0 text-base leading-none">{CARDS[banner.cardId]?.icon}</span>
-                <span className="shrink-0 text-slate-300">
+                <span className="shrink-0 text-white/85">
                   {banner.trap ? 'Jebakan aktif' : banner.side === 'player' ? 'Kamu memainkan' : `${g.names.enemy} memainkan`}
                 </span>
                 <b className="truncate text-white">{CARDS[banner.cardId]?.name}</b>
               </div>
             ) : banner.cardId ? (
               <div className="flex flex-col items-center gap-2">
-                <span className="rounded-full bg-black/70 px-3 py-1 text-xs font-bold">
+                <span className={clsx('tcg-hex-tag text-xs', banner.side === 'player' ? 'is-me' : 'is-foe')}>
                   {banner.trap ? 'Jebakan aktif · ' : banner.side === 'player' ? 'Kamu memainkan' : `${g.names.enemy} memainkan`}
                 </span>
                 <Card id={banner.cardId} size="lg" glow />
               </div>
             ) : (
-              <div className="rounded-xl border border-white/15 bg-[#0a0c11]/90 px-8 py-4 text-2xl font-semibold tracking-tight text-white shadow-2xl backdrop-blur sm:text-3xl">{banner.text}</div>
+              <div
+                className="px-10 py-4 text-3xl font-black uppercase tracking-wider text-white sm:text-5xl"
+                style={{ WebkitTextStroke: '4px #0b2160', paintOrder: 'stroke fill', textShadow: '0 5px 0 #0b2160, 0 10px 18px rgba(0,0,0,.6)' }}
+              >
+                {banner.text}
+              </div>
             )}
           </motion.div>
         )}
@@ -971,10 +969,10 @@ export default function Duel({ config, onExit, onRematch }) {
       {/* konfirmasi menyerah */}
       <AnimatePresence>
         {confirmQuit && !g.winner && (
-          <motion.div className="fixed inset-0 z-[55] flex items-center justify-center bg-[#05060a]/80 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+          <motion.div className="fixed inset-0 z-[55] flex items-center justify-center bg-[#031634]/80 p-4" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
             <div className="panel w-full max-w-sm space-y-3 p-5 text-center">
-              <p className="text-lg font-semibold tracking-tight">Menyerah?</p>
-              <p className="text-sm text-slate-300">Kamu akan dianggap kalah.</p>
+              <p className="text-lg font-extrabold tracking-tight">Menyerah?</p>
+              <p className="text-sm text-white/85">Kamu akan dianggap kalah.</p>
               <div className="flex gap-2">
                 <button className="btn flex-1" onClick={() => setConfirmQuit(false)}>Lanjut main</button>
                 <button className="btn btn-danger flex-1" onClick={() => { setConfirmQuit(false); act({ type: 'CONCEDE', side: 'player' }); }}>Menyerah</button>
@@ -987,13 +985,18 @@ export default function Duel({ config, onExit, onRematch }) {
       {/* hasil */}
       <AnimatePresence>
         {g.winner && (
-          <motion.div className="fixed inset-0 z-[56] flex items-center justify-center bg-[#05060a]/85 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
+          <motion.div className="fixed inset-0 z-[56] flex items-center justify-center bg-[#031634]/85 p-4 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1 }}>
             <motion.div initial={{ scale: 0.8 }} animate={{ scale: 1 }} transition={{ delay: 1, type: 'spring' }} className="panel w-full max-w-sm space-y-4 p-6 text-center">
-              <h2 className={clsx('text-3xl font-semibold tracking-tight', g.winner === 'player' ? 'text-emerald-300' : 'text-rose-300')}>
-                {g.winner === 'player' ? 'Menang' : 'Kalah'}
+              <h2
+                className={clsx('text-4xl font-black uppercase tracking-wider', g.winner === 'player' ? 'text-yellow-200' : 'text-red-300')}
+                style={{ textShadow: '0 3px 0 rgba(0,0,0,.5)' }}
+              >
+                {g.winner === 'player' ? 'Menang!' : 'Kalah'}
               </h2>
-              <p className="text-sm text-slate-300">{g.reason} · {g.turn} giliran</p>
-              {reward != null && <p className="text-lg font-semibold text-white">+{reward} koin</p>}
+              <p className="text-sm text-white/85">{g.reason} · {g.turn} giliran</p>
+              {reward != null && (
+                <p className="tcg-currency mx-auto !px-4 !py-1 text-base">+{reward} koin</p>
+              )}
               <div className="grid gap-2">
                 <button className="btn btn-primary" onClick={onRematch}>Duel Lagi</button>
                 <button className="btn" onClick={onExit}>Kembali ke Menu</button>
