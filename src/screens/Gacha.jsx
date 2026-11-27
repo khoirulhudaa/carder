@@ -7,6 +7,7 @@ import { useStore } from '../store/useStore.js';
 import { CARDS } from '../data/cards.js';
 import { PACK_PRICE, RARITY } from '../engine/constants.js';
 import { sfx } from '../lib/sfx.js';
+import { bgm } from '../lib/bgm.js';
 import {
   BASE_WEIGHT, MAX_RANK, TEST_COINS, TEST_UNLIMITED_COINS,
   addCards, drawCard, rankColor, rankOf,
@@ -27,6 +28,107 @@ const loadPity = () => {
 const savePity = (p) => { try { localStorage.setItem(PITY_KEY, JSON.stringify(p)); } catch (e) { /* abaikan */ } };
 
 /* ------------------------------------------------------------------ */
+/*  Pusaran kartu: kartu-kartu tersapu angin berputar mengelilingi pusat */
+/* ------------------------------------------------------------------ */
+const VX_STEPS = 24;
+const VX_ELL = Array.from({ length: VX_STEPS + 1 }, (_, k) => {
+  const t = k / VX_STEPS;
+  const a = t * Math.PI * 2;
+  const c = Math.cos(a).toFixed(4);
+  const sn = Math.sin(a);
+  const depth = (sn + 1) / 2; // 0 = jauh (belakang), 1 = dekat (depan)
+  return `${(t * 100).toFixed(2)}%{transform:translate(calc(var(--rx)*${c}),calc(var(--ry)*${sn.toFixed(4)})) scale(${(0.7 + 0.45 * depth).toFixed(3)});z-index:${sn > 0 ? 3 : 1};opacity:${(0.55 + 0.45 * depth).toFixed(2)}}`;
+}).join('');
+
+const VX_CSS = `
+.vx{position:relative}
+.vx-ring{position:absolute;border-radius:9999px;pointer-events:none;-webkit-mask:radial-gradient(circle,transparent 66%,#000 68%);mask:radial-gradient(circle,transparent 66%,#000 68%);animation:vx-turn var(--rd) linear infinite}
+.vx-core{position:absolute;border-radius:9999px;pointer-events:none;animation:vx-pulse var(--pd) ease-in-out infinite}
+.vx-b{position:absolute;inset:0;animation:vx-breathe var(--bd) ease-in-out infinite;animation-delay:var(--bl)}
+.vx-o{position:absolute;left:50%;top:50%;width:0;height:0;animation:vx-ell var(--dur) linear infinite;animation-delay:var(--dl)}
+.vx-c{position:absolute;border-radius:6px;border:2px solid rgba(255,255,255,.8);animation:vx-flutter var(--fd) ease-in-out infinite;animation-delay:var(--dl)}
+@keyframes vx-ell{${VX_ELL}}
+@keyframes vx-breathe{0%,100%{transform:scale(1)}50%{transform:scale(.66)}}
+@keyframes vx-flutter{0%,100%{transform:perspective(220px) rotateY(-58deg) rotateZ(-16deg)}50%{transform:perspective(220px) rotateY(58deg) rotateZ(16deg)}}
+@keyframes vx-turn{to{transform:rotate(360deg)}}
+@keyframes vx-pulse{0%,100%{opacity:.55;transform:scale(.88)}50%{opacity:1;transform:scale(1.12)}}
+@media (prefers-reduced-motion:reduce){.vx-b,.vx-o,.vx-c,.vx-ring,.vx-core{animation:none!important}}
+`;
+
+function CardVortex({ color = '#a855f7', size = 190, count = 10, fast = false }) {
+  const k = fast ? 0.36 : 1;
+  const cw = Math.round(size * 0.17);
+  const ch = Math.round(cw * 1.4);
+  const cards = Array.from({ length: count }, (_, i) => {
+    const ring = i % 3;
+    const rx = size * (0.27 + ring * 0.085);
+    const dur = (5.2 + ring * 1.7) * k;
+    const bd = (2.6 + ring * 0.6) * k;
+    return {
+      i,
+      '--rx': `${rx}px`,
+      '--ry': `${rx * 0.5}px`,
+      '--dur': `${dur}s`,
+      '--dl': `${-((i * 0.618) % 1) * dur}s`,
+      '--bd': `${bd}s`,
+      '--bl': `${-((i * 0.37) % 1) * bd}s`,
+      '--fd': `${(1.5 + (i % 4) * 0.35) * k}s`,
+    };
+  });
+  const rings = [
+    { inset: '2%', rd: 5.5 * k, dir: 'normal', op: 0.55 },
+    { inset: '14%', rd: 3.8 * k, dir: 'reverse', op: 0.45 },
+    { inset: '27%', rd: 2.6 * k, dir: 'normal', op: 0.4 },
+  ];
+
+  return (
+    <div className="vx" style={{ width: size, height: size, transform: 'rotate(-16deg)' }} aria-hidden>
+      <style>{VX_CSS}</style>
+      {rings.map((r, i) => (
+        <div
+          key={i}
+          className="vx-ring"
+          style={{
+            inset: r.inset,
+            opacity: r.op,
+            '--rd': `${r.rd}s`,
+            animationDirection: r.dir,
+            background: `conic-gradient(from ${i * 70}deg, transparent 0 18%, ${color} 30%, transparent 44% 62%, #fff 74%, transparent 88%)`,
+          }}
+        />
+      ))}
+      <div
+        className="vx-core"
+        style={{
+          inset: '38%',
+          '--pd': `${1.6 * k}s`,
+          background: `radial-gradient(circle at 40% 35%, #fff, ${color} 55%, transparent 78%)`,
+          boxShadow: `0 0 ${Math.round(size * 0.28)}px ${color}`,
+        }}
+      />
+      {cards.map(({ i, ...vars }) => (
+        <div key={i} className="vx-b" style={vars}>
+          <div className="vx-o" style={vars}>
+            <div
+              className="vx-c"
+              style={{
+                ...vars,
+                width: cw,
+                height: ch,
+                marginLeft: -cw / 2,
+                marginTop: -ch / 2,
+                background: `radial-gradient(circle at 50% 50%, ${color} 0 13%, transparent 15%), linear-gradient(145deg,#3b3f9a,#171a4a)`,
+                boxShadow: `0 0 12px ${color}, inset 0 0 8px rgba(255,255,255,.25)`,
+              }}
+            />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /*  Hasil tarikan                                                     */
 /* ------------------------------------------------------------------ */
 function GachaResult({ result, onClose }) {
@@ -38,6 +140,12 @@ function GachaResult({ result, onClose }) {
 
   const best = Math.max(...result.ids.map((id) => rankOf(CARDS[id])));
   const color = rankColor(best);
+
+  // musik mistis selama animasi tarikan & hasil
+  useEffect(() => {
+    bgm.setOverlay('summon');
+    return () => bgm.setOverlay(null);
+  }, []);
 
   useEffect(() => {
     if (phase !== 'charge') return undefined;
@@ -64,24 +172,12 @@ function GachaResult({ result, onClose }) {
     >
       {phase === 'charge' ? (
         <button className="flex flex-col items-center gap-6" onClick={() => setPhase('open')} aria-label="Lewati animasi">
-          <div className="relative flex h-56 w-56 items-center justify-center">
-            <motion.div
-              className="absolute inset-0 rounded-full"
-              style={{
-                background: `conic-gradient(from 0deg, transparent, ${color}, transparent, ${color}, transparent)`,
-                WebkitMask: 'radial-gradient(circle, transparent 58%, #000 60%)',
-                mask: 'radial-gradient(circle, transparent 58%, #000 60%)',
-              }}
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1.1, repeat: Infinity, ease: 'linear' }}
-            />
-            <motion.div
-              className="h-28 w-28 rounded-full"
-              style={{ background: `radial-gradient(circle at 35% 30%, #fff, ${color} 55%, transparent 76%)`, boxShadow: `0 0 70px ${color}` }}
-              animate={{ scale: [0.6, 1, 0.8, 1.3] }}
-              transition={{ duration: 1.6, ease: 'easeInOut' }}
-            />
-          </div>
+          <motion.div
+            animate={{ scale: [0.85, 1, 1.12, 0.8, 1.55], rotate: [0, 0, 6, -6, 18] }}
+            transition={{ duration: 1.7, ease: 'easeInOut' }}
+          >
+            <CardVortex size={270} count={16} fast color={color} />
+          </motion.div>
           <span className="text-sm text-slate-400">Memanggil…</span>
         </button>
       ) : (
@@ -182,17 +278,7 @@ export default function Gacha({ onBack }) {
       <div className="mx-auto w-full max-w-8xl flex-1 space-y-6 overflow-y-auto p-4 sm:p-6">
         {/* lingkaran pemanggilan */}
         <section className="panel flex flex-col items-center gap-5 p-6 text-center">
-          <div className="relative flex h-40 w-40 items-center justify-center">
-            <div
-              className="absolute inset-0 rounded-full opacity-80"
-              style={{
-                background: 'conic-gradient(from 0deg, transparent, #a855f7, transparent, #38bdf8, transparent, #fbbf24, transparent)',
-                WebkitMask: 'radial-gradient(circle, transparent 62%, #000 64%)',
-                mask: 'radial-gradient(circle, transparent 62%, #000 64%)',
-              }}
-            />
-            <div className="h-20 w-20 rounded-full" style={{ background: 'radial-gradient(circle at 35% 30%, #fff, #a855f7 55%, transparent 76%)', boxShadow: '0 0 50px #a855f7' }} />
-          </div>
+          <CardVortex size={200} count={10} color="#a855f7" />
           <div>
             <h2 className="text-lg font-semibold tracking-tight">Panggil Kartu</h2>
             <p className="mt-1 text-sm text-slate-400">Tarik satu per satu. Epik+ terjamin tiap {EPIC_PITY} tarikan, Legenda pasti di tarikan ke-{LEGEND_PITY}.</p>

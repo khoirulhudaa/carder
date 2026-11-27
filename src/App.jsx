@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from './store/useStore.js';
 import { setMuted } from './lib/sfx.js';
+import { bgm } from './lib/bgm.js';
 import StarterPick from './screens/StarterPick.jsx';
 import Menu from './screens/Menu.jsx';
 import DuelSetup from './screens/DuelSetup.jsx';
@@ -19,7 +20,15 @@ export default function App() {
   const [screen, setScreen] = useState('menu');
   const [cfg, setCfg] = useState(null);
 
-  useEffect(() => setMuted(muted), [muted]);
+  useEffect(() => {
+    setMuted(muted);
+    bgm.setMuted(muted);
+  }, [muted]);
+
+  // musik latar: tegang di layar duel, tenang di semua layar lain
+  useEffect(() => {
+    bgm.setBase(screen === 'duel' ? 'tense' : 'menu');
+  }, [screen]);
 
   if (!started) return <StarterPick />;
 

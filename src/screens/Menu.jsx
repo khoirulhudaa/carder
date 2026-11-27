@@ -34,11 +34,12 @@ const BANNERS = [
 function Backdrop() {
   return (
     <>
-      <div
+      {/* <div
         aria-hidden
         className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/bg3.jpg')" }}
-      />
+      /> */}
+      <video src="/bg3.mp4" autoPlay muted loop className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat" />
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0"
@@ -286,7 +287,7 @@ export default function Menu({ go }) {
           </IconCircle>
           <IconCircle
             label="Reset progres"
-            className="!h-10 !w-10 !rounded-xl !border-transparent !bg-red-600/70 !shadow-none hover:!bg-red-500"
+            className="!hidden sm:!flex !h-10 !w-10 !rounded-xl !border-transparent !bg-red-600/70 !shadow-none hover:!bg-red-500"
             onClick={() => { if (window.confirm('Hapus semua progres (koleksi, deck, koin) dan mulai dari awal?')) resetAll(); }}
           >
             <RotateCcw size={15} />
@@ -295,7 +296,9 @@ export default function Menu({ go }) {
       </header>
 
       {/* ===== KIRI: banner fitur ===== */}
-      <aside className="absolute left-2.5 top-[clamp(76px,16vh,104px)] z-20 flex flex-col gap-2 sm:left-3">
+      <aside className="absolute bottom-[calc(92px+env(safe-area-inset-bottom))] left-2.5 top-[clamp(76px,16vh,104px)] z-20 flex flex-col justify-between gap-2 sm:left-3 lg:bottom-[calc(160px+env(safe-area-inset-bottom))]">
+        {/* atas: banner fitur */}
+        <div className="flex flex-col gap-2">
         <PromoCard
           icon={Sparkles}
           title="Gacha"
@@ -312,32 +315,10 @@ export default function Menu({ go }) {
           tone="linear-gradient(135deg,#e0702a,#b43c18)"
           onClick={() => go2('fusion')}
         />
-
-        {/* target pemain */}
-        <div className="hidden w-[216px] flex-col gap-1.5 rounded-xl border border-white/30 bg-[#0a1550]/65 p-2 shadow-2xl backdrop-blur-md md:flex [@media(max-height:620px)]:hidden">
-          <div className="flex items-center gap-1.5 px-1 pb-0.5 text-[11px] font-black uppercase tracking-wider text-white/80">
-            <Target size={13} className="text-sky-300" /> Target Pemain
-          </div>
-          {missions.map((m) => {
-            const done = m.cur >= m.max;
-            return (
-              <div key={m.label} className="rounded-lg border border-white/20 bg-[#0b1750]/70 px-2 py-3">
-                <div className="flex items-center justify-between gap-2 text-[11px] font-bold">
-                  <span className={clsx('truncate', done && 'text-green-300')}>{m.label}</span>
-                  <span className="shrink-0 tabular-nums text-white/75">{done ? '✓' : `${m.cur}/${m.max}`}</span>
-                </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/40">
-                  <div
-                    className={clsx('h-full rounded-full', done ? 'bg-green-400' : 'bg-gradient-to-r from-sky-300 to-blue-500')}
-                    style={{ width: `${(m.cur / m.max) * 100}%` }}
-                  />
-                </div>
-              </div>
-            );
-          })}
         </div>
 
-        <div className="hidden w-[216px] rounded-xl border border-white/30 bg-[#0a1550]/65 p-2 shadow-2xl backdrop-blur-md md:block [@media(max-height:700px)]:!hidden">
+        {/* tengah: jalur juara */}
+        <div className="hidden w-[216px] rounded-xl border border-white/30 bg-[#0a1550]/65 p-2 shadow-2xl backdrop-blur-md md:block [@media(max-height:520px)]:!hidden">
           <div className="flex items-center justify-between px-1 pb-1.5 text-[11px] font-black uppercase tracking-wider text-white/80">
             <span className="flex items-center gap-1.5"><Crown size={13} className="text-yellow-300" /> Jalur Juara</span>
             <span className="tabular-nums">{champDone}/8</span>
@@ -359,10 +340,34 @@ export default function Menu({ go }) {
           </div>
           <div className="mt-1.5 px-1 text-[10px] text-white/60">Satu kemenangan membuka satu juara.</div>
         </div>
+
+        {/* target pemain */}
+        <div className="hidden w-[216px] flex-col gap-1.5 rounded-xl border border-white/30 bg-[#0a1550]/65 p-2 shadow-2xl backdrop-blur-md md:flex [@media(max-height:560px)]:hidden">
+          <div className="flex items-center gap-1.5 px-1 pb-0.5 text-[11px] font-black uppercase tracking-wider text-white/80">
+            <Target size={13} className="text-sky-300" /> Target Pemain
+          </div>
+          {missions.map((m) => {
+            const done = m.cur >= m.max;
+            return (
+              <div key={m.label} className="rounded-lg border border-white/20 bg-[#0b1750]/70 px-2 py-1.5">
+                <div className="flex items-center justify-between gap-2 text-[11px] font-bold">
+                  <span className={clsx('truncate', done && 'text-green-300')}>{m.label}</span>
+                  <span className="shrink-0 tabular-nums text-white/75">{done ? '✓' : `${m.cur}/${m.max}`}</span>
+                </div>
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-black/40">
+                  <div
+                    className={clsx('h-full rounded-full', done ? 'bg-green-400' : 'bg-gradient-to-r from-sky-300 to-blue-500')}
+                    style={{ width: `${(m.cur / m.max) * 100}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </aside>
 
       {/* ===== KANAN: panel rekor ===== */}
-      <aside className="absolute bottom-[calc(92px+env(safe-area-inset-bottom))] right-3 top-[clamp(76px,14vh,100px)] z-20 hidden w-[216px] flex-col gap-2 overflow-y-auto md:flex lg:w-[240px]">
+      <aside className="absolute bottom-[calc(92px+env(safe-area-inset-bottom))] right-3 top-[clamp(76px,14vh,100px)] z-20 hidden w-[216px] flex-col gap-2 overflow-y-auto md:flex lg:w-[240px] [@media(max-height:480px)]:!hidden">
         <div className="flex flex-col gap-1.5 rounded-xl border border-white/30 bg-[#0a1550]/65 p-2 shadow-2xl backdrop-blur-md">
         <div className="flex items-center justify-between px-1 pb-0.5 text-[11px] font-black uppercase tracking-wider text-white/80">
           <span>Rekor Duel</span>
@@ -419,9 +424,38 @@ export default function Menu({ go }) {
 
       {/* ===== TENGAH: tombol Duel ===== */}
       <main className="absolute inset-0 z-10 flex flex-col items-center justify-end px-3 pb-[calc(76px+env(safe-area-inset-bottom))] sm:pb-[calc(88px+env(safe-area-inset-bottom))]">
+        {/* ringkasan mobile (md ke bawah) */}
+        <div className="mb-2 flex w-[min(92vw,420px)] flex-col gap-1.5 md:hidden [@media(max-height:560px)]:!hidden">
+          <div className="grid grid-cols-3 gap-1.5">
+            {[
+              { icon: Trophy,  tint: 'text-yellow-300', label: 'Menang',   value: `${winRate}%` },
+              { icon: Flame,   tint: 'text-orange-300', label: 'Beruntun', value: stats.streak || 0 },
+              { icon: Library, tint: 'text-green-300',  label: 'Koleksi',  value: `${ownedPct}%` },
+            ].map((c) => (
+              <div key={c.label} className="flex items-center gap-1.5 rounded-xl border border-white/30 bg-[#0a1550]/70 px-2 py-1.5 shadow-lg backdrop-blur">
+                <c.icon size={16} className={clsx('shrink-0', c.tint)} />
+                <div className="min-w-0 leading-tight">
+                  <div className="truncate text-[9px] font-extrabold uppercase tracking-wide text-white/70">{c.label}</div>
+                  <div className="text-sm font-black tabular-nums">{c.value}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="flex items-center gap-2 rounded-xl border border-white/30 bg-[#0a1550]/70 px-2.5 py-1.5 shadow-lg backdrop-blur">
+            <Crown size={15} className="shrink-0 text-yellow-300" />
+            <span className="shrink-0 text-[10px] font-black uppercase tracking-wider text-white/80">Juara</span>
+            <div className="flex flex-1 gap-1">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <span key={i} className={clsx('h-2 flex-1 rounded-full', i < champDone ? 'bg-gradient-to-r from-yellow-300 to-orange-400' : 'bg-black/45')} />
+              ))}
+            </div>
+            <span className="shrink-0 text-[11px] font-black tabular-nums">{champDone}/8</span>
+          </div>
+        </div>
+
         {/* plakat rank */}
         <div
-          className="lb-anim mb-2 flex items-center gap-3 rounded-full border border-yellow-200/70 bg-[#0c1a4a]/80 py-1.5 pl-1.5 pr-5 shadow-xl backdrop-blur"
+          className="lb-anim mb-2 flex items-center gap-3 rounded-full border border-yellow-200/70 [@media(max-height:480px)]:!hidden bg-[#0c1a4a]/80 py-1.5 pl-1.5 pr-5 shadow-xl backdrop-blur"
           style={{ animation: 'lb-float 4s ease-in-out infinite' }}
         >
           <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-yellow-200 bg-gradient-to-b from-yellow-300 to-orange-500 text-base font-black text-slate-900 shadow-inner sm:h-12 sm:w-12">
