@@ -260,28 +260,28 @@ function CardBack() {
   return (
     <svg viewBox="0 0 100 140" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" aria-hidden>
       <defs>
-       <radialGradient id={`${id}orb`} cx="50%" cy="62%" r="62%">
-          <stop offset="0%" stopColor="#3fcf8e" />
-          <stop offset="45%" stopColor="#2f6fdc" />
-          <stop offset="100%" stopColor="#070a12" />
+        <radialGradient id={`${id}orb`} cx="50%" cy="62%" r="62%">
+          <stop offset="0%" stopColor="#7dd3fc" />
+          <stop offset="45%" stopColor="#1d4ed8" />
+          <stop offset="100%" stopColor="#0b1437" />
         </radialGradient>
         <linearGradient id={`${id}gold`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#bfe3ff" />
-          <stop offset="35%" stopColor="#4f8df0" />
-          <stop offset="65%" stopColor="#1f55b8" />
-          <stop offset="100%" stopColor="#7fe0b3" />
-        </linearGradient>
+          <stop offset="0%" stopColor="#fff7cc" />
+          <stop offset="35%" stopColor="#f5b82e" />
+          <stop offset="65%" stopColor="#a86a0c" />
+          <stop offset="100%" stopColor="#ffe08a" />
+        </linearGradient>  
         <linearGradient id={`${id}glass`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
           <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
         </linearGradient>
       </defs>
       {/* kilap kartu dan bingkai dalam */}
-      <path d="M0 0 H58 L0 80 Z" fill="#ffffff" opacity="0.08" />
-      <path d="M100 60 V86 L61 140 H42 Z" fill="#ffffff" opacity="0.06" />
-      <rect x="6" y="6" width="88" height="128" rx="7" fill="none" stroke="#4f8df0" strokeWidth="1" opacity="0.6" />
+      <path d="M0 0 H58 L0 80 Z" fill="#ffffff" opacity="0.4" />
+      <path d="M100 60 V86 L61 140 H42 Z" fill="#ffffff" opacity="0.3" />
+      <rect x="6" y="6" width="88" height="128" rx="7" fill="none" stroke="#64748b" strokeWidth="1" opacity="0.5" />
       {/* bayangan alas */}
-      <ellipse cx="50" cy="112" rx="25" ry="3.5" fill="#000000" opacity="0.4" />
+      <ellipse cx="50" cy="112" rx="25" ry="3.5" fill="#334155" opacity="0.2" />
       {/* sinar panjang dan pendek */}
       <path d="M50 25 L55 50 L45 50 Z M95 70 L70 75 L70 65 Z M50 115 L45 90 L55 90 Z M5 70 L30 65 L30 75 Z" fill={url('gold')} />
       <g transform="rotate(45 50 70)">
