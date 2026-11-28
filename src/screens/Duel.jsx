@@ -4,7 +4,7 @@ import {
   ArrowLeft, ArrowRight, ArrowUp, ChevronLeft, ChevronRight, Flag, Hand, Layers, PanelRightClose,
   PanelRightOpen, ScrollText, Shield, Sparkles, Sword, Swords, X, Zap,
 } from 'lucide-react';
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Card from '../components/Card.jsx';
 import CutIns from '../components/CutIn.jsx';
 import DuelLog from '../components/duelLog.jsx';
@@ -178,6 +178,34 @@ function Btn({ children, onClick, primary, danger, disabled, className, title })
   );
 }
 
+// Skalakan isi agar lebarnya persis selebar wadah
+function FitWidth({ children }) {
+  const boxRef = useRef(null);
+  const innerRef = useRef(null);
+  const [fit, setFit] = useState({ scale: 1, height: undefined });
+  useLayoutEffect(() => {
+    const box = boxRef.current;
+    const inner = innerRef.current;
+    const calc = () => {
+      if (!box.clientWidth || !inner.offsetWidth) return;
+      const scale = box.clientWidth / inner.offsetWidth;
+      setFit({ scale, height: inner.offsetHeight * scale });
+    };
+    calc();
+    const ro = new ResizeObserver(calc);
+    ro.observe(box);
+    ro.observe(inner);
+    return () => ro.disconnect();
+  }, []);
+  return (
+    <div ref={boxRef} className="w-full shrink-0 overflow-hidden" style={{ height: fit.height }}>
+      <div ref={innerRef} className="w-max origin-top-left" style={{ transform: `scale(${fit.scale})` }}>
+        {children}
+      </div>
+    </div>
+  );
+}
+
 /* ------------------------------------------------------------------ */
 /*  Kartu Hadiah (ala Pokémon TCG)                                    */
 /* ------------------------------------------------------------------ */
@@ -224,13 +252,69 @@ function countKills(prev, next) {
   return out;
 }
 
+// Punggung kartu: bola kristal elemen berbingkai emas dengan delapan sinar
+function CardBack() {
+  const id = useId();
+  const url = (name) => `url(#${id}${name})`;
+  const elements = ['#ef4444', '#0ea5e9', '#10b981', '#f59e0b'];
+  return (
+    <svg viewBox="0 0 100 140" preserveAspectRatio="xMidYMid meet" className="absolute inset-0 h-full w-full" aria-hidden>
+      <defs>
+        <radialGradient id={`${id}orb`} cx="50%" cy="62%" r="62%">
+          <stop offset="0%" stopColor="#7dd3fc" />
+          <stop offset="45%" stopColor="#1d4ed8" />
+          <stop offset="100%" stopColor="#0b1437" />
+        </radialGradient>
+        <linearGradient id={`${id}gold`} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#fff7cc" />
+          <stop offset="35%" stopColor="#f5b82e" />
+          <stop offset="65%" stopColor="#a86a0c" />
+          <stop offset="100%" stopColor="#ffe08a" />
+        </linearGradient>
+        <linearGradient id={`${id}glass`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+        </linearGradient>
+      </defs>
+      {/* kilap kartu dan bingkai dalam */}
+      <path d="M0 0 H58 L0 80 Z" fill="#ffffff" opacity="0.4" />
+      <path d="M100 60 V86 L61 140 H42 Z" fill="#ffffff" opacity="0.3" />
+      <rect x="6" y="6" width="88" height="128" rx="7" fill="none" stroke="#64748b" strokeWidth="1" opacity="0.5" />
+      {/* bayangan alas */}
+      <ellipse cx="50" cy="112" rx="25" ry="3.5" fill="#334155" opacity="0.2" />
+      {/* sinar panjang dan pendek */}
+      <path d="M50 25 L55 50 L45 50 Z M95 70 L70 75 L70 65 Z M50 115 L45 90 L55 90 Z M5 70 L30 65 L30 75 Z" fill={url('gold')} />
+      <g transform="rotate(45 50 70)">
+        <path d="M50 35 L54 50 L46 50 Z M85 70 L70 74 L70 66 Z M50 105 L46 90 L54 90 Z M15 70 L30 66 L30 74 Z" fill={url('gold')} />
+      </g>
+      {/* cincin dan bola */}
+      <circle cx="50" cy="70" r="30" fill={url('gold')} />
+      <circle cx="50" cy="70" r="26" fill="#0b1437" />
+      <circle cx="50" cy="70" r="24.5" fill={url('orb')} />
+      {/* empat kristal elemen */}
+      {elements.map((color, i) => (
+        <g key={color} transform={`rotate(${i * 90} 50 70)`}>
+          <path d="M50 50 L56 62 L50 67 Z" fill={color} />
+          <path d="M50 50 L44 62 L50 67 Z" fill={color} />
+          <path d="M50 50 L44 62 L50 67 Z" fill="#ffffff" opacity="0.4" />
+        </g>
+      ))}
+      <path d="M50 61 L53 67 L59 70 L53 73 L50 79 L47 73 L41 70 L47 67 Z" fill="#ffffff" />
+      {/* pantulan kaca */}
+      <ellipse cx="50" cy="57" rx="17" ry="10" fill={url('glass')} opacity="0.55" />
+      <circle cx="39" cy="58" r="2.2" fill="#ffffff" />
+      <path d="M32 80 A21 21 0 0 0 68 80" fill="none" stroke="#bae6fd" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
+    </svg>
+  );
+}
+
 // Tumpukan hadiah: punggung kartu biru bergaya TCG Live
-function PrizePile({ cards, pending, mine, onTake }) {
+function PrizePile({ cards, pending, mine, onTake, desktop }) {
   const canTake = mine && pending > 0;
   return (
-    <div className="flex shrink-0 flex-col items-center gap-1" title="Kartu Hadiah">
-      <span className="rounded bg-black/45 px-1.5 text-[9px] font-extrabold uppercase tracking-wider text-white">Hadiah</span>
-      <div className="flex flex-col gap-1">
+    <div className="relative flex shrink-0 flex-col items-center gap-1" title="Kartu Hadiah">
+      <span className="rounded bg-black/45 px-1.5 text-[9px] font-extrabold uppercase tracking-wider text-white lg:absolute lg:-top-2 lg:z-10">Hadiah</span>
+      <div className={clsx('flex flex-col gap-1 lg:flex-row lg:gap-3 lg:p-2', desktop && 'duel-lane')}>
         {Array.from({ length: PRIZE_COUNT }).map((_, i) => {
           const c = cards[i];
           return c ? (
@@ -240,18 +324,19 @@ function PrizePile({ cards, pending, mine, onTake }) {
               onClick={() => onTake(i)}
               aria-label="Ambil kartu hadiah"
               className={clsx(
-                'relative h-8 w-6 rounded-[4px] border-2 bg-gradient-to-br from-sky-300 to-blue-900 transition sm:h-9 sm:w-[26px]',
-                canTake ? 'animate-pulse cursor-pointer border-yellow-300 shadow-[0_0_10px_rgba(253,224,71,.9)] hover:-translate-y-0.5' : 'border-white/70',
+                TILE_SIZE,
+                'relative h-8 w-6 rounded-[4px] border-2 lg:!h-[10.5em] lg:!w-[9em] lg:rounded-[0.7em] overflow-hidden bg-gradient-to-br from-white via-slate-300 to-slate-400 transition sm:h-9 sm:w-[26px]',
+                canTake ? 'animate-pulse cursor-pointer border-yellow-300' : 'border-white/70',
               )}
             >
-              <span className="absolute inset-0 flex items-center justify-center text-[10px] text-white/90">★</span>
+              <CardBack />
             </button>
           ) : (
-            <div key={`e${i}`} className="h-8 w-6 rounded-[4px] border border-dashed border-white/30 sm:h-9 sm:w-[26px]" />
+            <div key={`e${i}`} className={clsx(TILE_SIZE, 'h-8 w-6 rounded-[4px] border border-dashed border-white/30 sm:h-9 sm:w-[26px] lg:!h-[10.5em] lg:!w-[9em] lg:rounded-[0.7em]')} />
           );
         })}
       </div>
-      {canTake && <span className="rounded bg-yellow-300 px-1.5 text-[10px] font-black text-slate-900">Ambil {pending}</span>}
+      {canTake && <span className="rounded bg-yellow-300 px-1.5 text-[10px] font-black text-slate-900 lg:absolute lg:-bottom-2 lg:z-10">Ambil {pending}</span>}
     </div>
   );
 }
@@ -259,7 +344,8 @@ function PrizePile({ cards, pending, mine, onTake }) {
 /* ------------------------------------------------------------------ */
 /*  Layar duel                                                        */
 /* ------------------------------------------------------------------ */
-const BOARD_UNIT = 'clamp(5px, calc((100dvh - 300px) / 23), min(11px, 1.6vw))';
+// 3 hadiah + 3 slot monster sejajar, jadi lebar sidebar ikut dihitung
+const boardUnit = (side) => `clamp(5px, calc((100dvh - 300px) / 23), min(11px, calc((100vw - ${side ? 700 : 420}px) / 62)))`;
 const BOARD_UNIT_MOBILE = 'clamp(5px, min(calc((100dvh - 250px) / 23), calc((100vw - 120px) / 29)), 12px)';
 
 function useIsMobile() {
@@ -719,7 +805,7 @@ export default function Duel({ config, onExit, onRematch }) {
 
   const renderLane = (side) => (
     <div className="flex items-center justify-center gap-2 sm:gap-4">
-      <PrizePile cards={prizes[side]} pending={side === 'player' ? pending.player : 0} mine={side === 'player'} onTake={takePrize} />
+      <PrizePile desktop={!isMobile} cards={prizes[side]} pending={side === 'player' ? pending.player : 0} mine={side === 'player'} onTake={takePrize} />
       <div className="duel-lane flex gap-2 p-2 sm:gap-3">
         {[0, 1, 2].map((s) => (
           <Slot
@@ -728,7 +814,7 @@ export default function Duel({ config, onExit, onRematch }) {
           />
         ))}
       </div>
-      <div className="w-6 shrink-0" aria-hidden />
+      <div className="w-6 shrink-0 lg:hidden" aria-hidden />
     </div>
   );
 
@@ -740,11 +826,11 @@ export default function Duel({ config, onExit, onRematch }) {
         <div className="flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto p-3">
           {shownId ? (
             <>
-              <div className="flex justify-center">
+              <FitWidth>
                 <div className="tcg-cardframe">
                   <Card id={shownId} size="lg" className="!text-[21px] xl:!text-[24px]" />
                 </div>
-              </div>
+              </FitWidth>
 
               <div className="flex flex-wrap gap-1.5 text-[11px]">
                 {[
@@ -797,7 +883,7 @@ export default function Duel({ config, onExit, onRematch }) {
       {/* papan */}
       <main
         className="duel-main flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-hidden pb-[max(0.25rem,env(safe-area-inset-bottom))]"
-        style={{ '--u': isMobile ? BOARD_UNIT_MOBILE : BOARD_UNIT }}
+        style={{ '--u': isMobile ? BOARD_UNIT_MOBILE : boardUnit(showSide) }}
       >
         {/* ===== zona lawan (merah) ===== */}
         <div className="duel-zone is-foe !items-stretch !justify-start gap-1 px-2 pb-3 pt-[max(0.5rem,env(safe-area-inset-top))] sm:px-4">
@@ -864,7 +950,11 @@ export default function Duel({ config, onExit, onRematch }) {
                   return (
                     <div
                       key={c.uid}
-                      className={clsx('transition-[filter,transform] duration-150', on ? '-translate-y-3 z-10' : 'hover:z-10 hover:brightness-125')}
+                      className={clsx(
+                        // paksa kartu diam dan tanpa bayangan, termasuk gaya bawaan Card
+                        'rounded-lg [&_*]:!shadow-none [&>*]:![transform:none] [&>*]:![translate:none]',
+                        on ? 'outline outline-2 outline-yellow-300' : 'hover:brightness-125',
+                      )}
                       onMouseEnter={() => setHover({ cardId: c.id })}
                       onMouseLeave={() => setHover(null)}
                     >
