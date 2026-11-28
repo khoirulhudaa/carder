@@ -397,6 +397,11 @@ export default function Duel({ config, onExit, onRematch }) {
   const [cutIns, setCutIns] = useState([]);
   const cutRef = useRef(0);
   const isMobile = useIsMobile();
+  const rightRef = useRef(null);
+  const mainRef = useRef(null);
+  const [dock, setDock] = useState(null);
+  const dockRef = useRef(null);
+  const [dockW, setDockW] = useState(0);
   const mobileRef = useRef(isMobile);
   mobileRef.current = isMobile;
   const [showHand, setShowHand] = useState(false);
@@ -571,20 +576,6 @@ export default function Duel({ config, onExit, onRematch }) {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
   }, [g.log.length, showLog]);
 
-  const rightRef = useRef(null);
-  const stickLog = useCallback(() => {
-    const r = rightRef.current;
-    if (!r) return;
-    r.querySelectorAll('*').forEach((el) => {
-      if (el.scrollHeight > el.clientHeight + 1) el.scrollTop = el.scrollHeight;
-    });
-  }, []);
-  useEffect(() => {
-    stickLog();
-    const t = setTimeout(stickLog, 60);
-    return () => clearTimeout(t);
-  }, [detail.length, g.log.length, showSide, stickLog]);
-
   /* ---------- turunan ---------- */
   const me = g.players.player;
   const myTurn = g.active === 'player' && !g.winner;
@@ -632,6 +623,48 @@ export default function Duel({ config, onExit, onRematch }) {
     return { kind: 'card', cardId: sel.cardId };
   }, [sel, g, me.hand]);
 
+  useLayoutEffect(() => {
+    if (dockRef.current) setDockW(dockRef.current.offsetWidth);
+  }, [dock, selInfo, mode, me.hand.length]);
+
+  const stickLog = useCallback(() => {
+    const r = rightRef.current;
+    if (!r) return;
+    r.querySelectorAll('*').forEach((el) => {
+      if (el.scrollHeight > el.clientHeight + 1) el.scrollTop = el.scrollHeight;
+    });
+  }, []);
+  useEffect(() => {
+    stickLog();
+    const t = setTimeout(stickLog, 60);
+    return () => clearTimeout(t);
+  }, [detail.length, g.log.length, showSide, stickLog]);
+
+
+ useLayoutEffect(() => {
+  if (isMobile || !selInfo || !myTurn) { setDock(null); return undefined; }
+
+  const find = () => {
+    if (selInfo.kind === 'hand') return document.querySelector(`[data-hand-uid="${selInfo.card.uid}"]`);
+    if (selInfo.kind === 'mon' && selInfo.side === 'player') return document.querySelector(`[data-fx="player:${selInfo.slot}"]`);
+    return null;
+  };
+
+  const calc = () => {
+    const el = find();
+    if (!el) { setDock(null); return; }
+    const r = el.getBoundingClientRect();
+    setDock({ x: r.left + r.width / 2, y: r.top });
+  };
+
+  calc();
+  const raf = requestAnimationFrame(calc);
+  window.addEventListener('resize', calc);
+  return () => {
+    cancelAnimationFrame(raf);
+    window.removeEventListener('resize', calc);
+  };
+}, [selInfo, myTurn, mode, isMobile, page, showSide, me.hand.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const shown = hover || selInfo;
   const shownId = shown?.cardId ?? null;
 
@@ -793,6 +826,19 @@ export default function Duel({ config, onExit, onRematch }) {
     return null;
   }
 
+  // dock hanya muncul kalau ada aksi yang bisa ditekan
+  const hasActions = (() => {
+    if (!selInfo || !myTurn) return false;
+    if (mode) return true; // mode pilih target tetap tampil (ada tombol Batal)
+    if (selInfo.kind === 'hand') {
+      const d = CARDS[selInfo.cardId];
+      return d.evolvesFrom
+        ? [0, 1, 2].some((s) => canEvolve(g, 'player', s, selInfo.card.uid).ok)
+        : canPlayCard(g, 'player', selInfo.card.uid).ok;
+    }
+    return selInfo.kind === 'mon' && selInfo.side === 'player';
+  })();
+
   const usable = (c) => (CARDS[c.id].evolvesFrom
     ? [0, 1, 2].some((i) => canEvolve(g, 'player', i, c.uid).ok)
     : canPlayCard(g, 'player', c.uid).ok);
@@ -876,13 +922,14 @@ export default function Duel({ config, onExit, onRematch }) {
             <span>Hadiah <b className="text-white">{prizes.player.length}</b></span>
           </div>
 
-          {shownId && selInfo && <div className="shrink-0 pt-1">{renderActions()}</div>}
+          {/* {shownId && selInfo && <div className="shrink-0 pt-1">{renderActions()}</div>} */}
         </div>
       </aside>
 
       {/* papan */}
       <main
-        className="duel-main flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-hidden pb-[max(0.25rem,env(safe-area-inset-bottom))]"
+        ref={mainRef}
+        className="duel-main relative flex min-h-0 min-w-0 flex-1 flex-col gap-1 overflow-hidden pb-[max(0.25rem,env(safe-area-inset-bottom))]"
         style={{ '--u': isMobile ? BOARD_UNIT_MOBILE : boardUnit(showSide) }}
       >
         {/* ===== zona lawan (merah) ===== */}
@@ -950,12 +997,14 @@ export default function Duel({ config, onExit, onRematch }) {
                   return (
                     <div
                       key={c.uid}
+                      data-hand-uid={c.uid}
                       className={clsx(
                         // paksa kartu diam dan tanpa bayangan, termasuk gaya bawaan Card
                         'rounded-lg [&_*]:!shadow-none [&>*]:![transform:none] [&>*]:![translate:none]',
                         on ? 'outline outline-2 outline-yellow-300' : 'hover:brightness-125',
                       )}
                       onMouseEnter={() => setHover({ cardId: c.id })}
+                      
                       onMouseLeave={() => setHover(null)}
                     >
                       <Card
@@ -1039,6 +1088,40 @@ export default function Duel({ config, onExit, onRematch }) {
             <button className="btn btn-sm" onClick={cancel}>Batal</button>
           </motion.div>
         )}
+      </AnimatePresence>
+
+      {/* dock aksi melayang (desktop) */}
+      <AnimatePresence>
+      {/* dock aksi melayang (desktop): menempel di atas kartu/monster yang dipilih */}
+      {dock && selInfo && hasActions && (() => {
+        const half = (dockW || 160) / 2 + 8;
+        const left = Math.min(Math.max(dock.x, half), window.innerWidth - half);
+        const arrowShift = dock.x - left; // panah tetap menunjuk ke kartu
+        return (
+          <div
+            className="pointer-events-none fixed z-[33] hidden lg:block"
+            style={{ left, top: dock.y - 10, transform: 'translate(-50%, -100%)' }}
+          >
+            <motion.div
+              key={selInfo.kind === 'hand' ? `h${selInfo.card.uid}` : `m${selInfo.slot}`}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.15 }}
+            >
+              <div
+                ref={dockRef}
+                className="pointer-events-auto relative top-36 w-max max-w-[22rem] rounded-xl border border-yellow-200/60 bg-[#0a1c4a]/95 p-1.5 shadow-2xl backdrop-blur [&_.btn]:!min-w-[2.5rem]"
+              >
+                {renderActions()}
+                {/* <span
+                  className="absolute -bottom-1.5 h-3 w-3 -translate-x-1/2 rotate-45 border-b border-r border-yellow-200/60 bg-[#0a1c4a]"
+                  style={{ left: `calc(50% + ${arrowShift}px)` }}
+                /> */}
+              </div>
+            </motion.div>
+          </div>
+        );
+      })()}
       </AnimatePresence>
 
       {/* daftar kartu tangan (mobile) */}

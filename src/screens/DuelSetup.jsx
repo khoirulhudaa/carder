@@ -11,8 +11,10 @@ import { validateDeck } from '../engine/deck.js';
 import { sfx } from '../lib/sfx.js';
 
 const GAP = 8;
+const MIN_SCALE = 0.8; // kartu tidak dikecilkan di bawah ini; selebihnya digulir
+const MAX_SCALE = 1.6;
 
-// Semua kartu deck. Di desktop ukurannya disesuaikan agar muat tanpa digulir.
+// Semua kartu deck. Di desktop ukurannya disesuaikan agar muat; jika terlalu banyak, bisa digulir.
 function DeckCards({ ids }) {
   const boxRef = useRef(null);
   const [fit, setFit] = useState(null);
@@ -31,13 +33,22 @@ function DeckCards({ ids }) {
       const h = card.offsetHeight;
       const W = box.clientWidth;
       const H = box.clientHeight;
+      if (!w || !h || !W || !H) return;
+
       let best = null;
       for (let cols = 1; cols <= total; cols += 1) {
         const rows = Math.ceil(total / cols);
-        const scale = Math.min(1.6, (W - GAP * (cols - 1)) / (cols * w), (H - GAP * (rows - 1)) / (rows * h));
-        if (scale > 0 && (!best || scale > best.scale)) best = { scale, cols, w: w * scale, h: h * scale };
+        const scale = Math.min(MAX_SCALE, (W - GAP * (cols - 1)) / (cols * w), (H - GAP * (rows - 1)) / (rows * h));
+        if (scale > 0 && (!best || scale > best.scale)) best = { scale, cols };
       }
-      setFit(best);
+
+      // terlalu banyak kartu: pakai skala minimum dan biarkan menggulir
+      if (!best || best.scale < MIN_SCALE) {
+        const cols = Math.max(1, Math.min(total, Math.floor((W + GAP) / (w * MIN_SCALE + GAP))));
+        best = { scale: MIN_SCALE, cols };
+      }
+
+      setFit({ scale: best.scale, cols: best.cols, w: w * best.scale, h: h * best.scale });
     };
     calc();
     const ro = new ResizeObserver(calc);
@@ -46,9 +57,13 @@ function DeckCards({ ids }) {
   }, [total]);
 
   return (
-    <div ref={boxRef} className="lg:min-h-0 lg:flex-1 lg:overflow-hidden">
+    <div
+      ref={boxRef}
+      className="lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:overflow-x-hidden"
+      style={{ scrollbarGutter: 'stable' }}
+    >
       <div
-        className="flex flex-wrap justify-center gap-2 lg:h-full lg:content-center"
+        className="flex flex-wrap justify-center gap-2 lg:min-h-full lg:content-center"
         style={fit ? { maxWidth: Math.ceil(fit.cols * fit.w + GAP * (fit.cols - 1)) + 1, marginInline: 'auto' } : undefined}
       >
         {list.map(([id, n]) => (
@@ -91,10 +106,9 @@ export default function DuelSetup({ onBack, onStart }) {
   return (
     <div className="flex h-[100dvh] flex-col">
       <Header title="Trainer Challenge" onBack={onBack} />
-      <div className="mx-auto min-h-0 w-full max-w-7xl flex-1 space-y-5 overflow-y-auto p-4 sm:p-6 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-6 lg:space-y-0 lg:overflow-hidden">
+      <div className="mx-auto min-h-0 w-full max-w-8xl flex-1 space-y-5 overflow-y-auto p-3 sm:p-3 lg:grid lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:grid-rows-[minmax(0,1fr)] lg:gap-6 lg:space-y-0 lg:overflow-hidden">
         {/* ===== kiri: lawan ===== */}
         <section className="lg:flex lg:min-h-0 lg:flex-col">
-          <div className="mb-2 flex justify-center"><span className="tcg-select !rounded-lg ![clip-path:none]">Pilih lawan</span></div>
           <div className="tcg-strip grid grid-cols-1 gap-2 sm:grid-cols-2 lg:min-h-0 lg:flex-1 lg:auto-rows-fr lg:overflow-y-auto">
             {OPPONENTS.map((o) => {
               const el = o.element ? ELEMENTS[o.element] : null;
@@ -125,28 +139,27 @@ export default function DuelSetup({ onBack, onStart }) {
         {/* ===== kanan: deck dan kesulitan ===== */}
         <div className="space-y-5 lg:flex lg:min-h-0 lg:flex-col lg:gap-4 lg:space-y-0">
           <section className="lg:flex lg:min-h-0 lg:flex-1 lg:flex-col">
-            <div className="mb-2 flex justify-center"><span className="tcg-select !rounded-lg ![clip-path:none]">Pilih deck</span></div>
             <div className="tcg-strip flex flex-col gap-2 lg:min-h-0 lg:flex-1">
-            <div className="flex shrink-0 flex-wrap justify-center gap-2">
-              {decks.map((d) => {
-                const ok = validateDeck(d.cards, collection).ok;
-                return (
-                  <button
-                    key={d.id}
-                    onClick={() => { sfx.click(); setDeckId(d.id); }}
-                    className={clsx(
-                      'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-extrabold',
-                      deckId === d.id ? 'border-yellow-200 bg-yellow-300 text-slate-900' : 'border-white/40 bg-white/10 hover:bg-white/20',
-                    )}
-                  >
-                    {!ok && <AlertTriangle size={12} />}
-                    {d.name} · {d.cards.length} kartu
-                  </button>
-                );
-              })}
-              {decks.length === 0 && <p className="p-4 text-sm text-white/80">Belum ada deck. Buat di Deck Builder.</p>}
-            </div>
-            {deck && <DeckCards key={deck.id} ids={deck.cards} />}
+              <div className="flex shrink-0 flex-wrap justify-center gap-2">
+                {decks.map((d) => {
+                  const ok = validateDeck(d.cards, collection).ok;
+                  return (
+                    <button
+                      key={d.id}
+                      onClick={() => { sfx.click(); setDeckId(d.id); }}
+                      className={clsx(
+                        'flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-extrabold',
+                        deckId === d.id ? 'border-yellow-200 bg-yellow-300 text-slate-900' : 'border-white/40 bg-white/10 hover:bg-white/20',
+                      )}
+                    >
+                      {!ok && <AlertTriangle size={12} />}
+                      {d.name} · {d.cards.length} kartu
+                    </button>
+                  );
+                })}
+                {decks.length === 0 && <p className="p-4 text-sm text-white/80">Belum ada deck. Buat di Deck Builder.</p>}
+              </div>
+              {deck && <DeckCards key={deck.id} ids={deck.cards} />}
             </div>
             {!check.ok && (
               <p className="mt-2 rounded-md border border-yellow-300/50 bg-black/50 p-2.5 text-xs text-yellow-200">
@@ -159,7 +172,7 @@ export default function DuelSetup({ onBack, onStart }) {
 
       {/* ===== bilah bawah: kolomnya sejajar dengan dua panel di atas ===== */}
       <div className="shrink-0 border-t-2 border-cyan-400/50 bg-[#0a2f63]/90 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-        <div className="mx-auto grid w-full max-w-7xl gap-3 px-4 sm:px-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-6">
+        <div className="mx-auto grid w-full max-w-8xl gap-3 px-3 sm:px-3 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-6">
           <div className="grid grid-cols-3 gap-2" role="group" aria-label="Kesulitan">
             {Object.values(DIFFICULTIES).map((d) => (
               <button

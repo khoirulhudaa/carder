@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
-  BookOpen, Coins, Combine, Crown, Flame, Gift, Layers, Library, Plus,
+  BookOpen, ChevronLeft, ChevronRight, Coins, Combine, Crown, Flame, Gift, Layers, Library, Plus,
   RotateCcw, ShoppingBag, Sparkles, Swords, Target, Trophy, Volume2, VolumeX,
 } from 'lucide-react';
 import clsx from 'clsx';
@@ -227,6 +227,9 @@ export default function Menu({ go }) {
   const champDone = Math.min(8, stats.wins);
   const banner = BANNERS[bannerIdx];
 
+  const prevBanner = () => { sfx.click(); setBannerIdx((i) => (i - 1 + BANNERS.length) % BANNERS.length); };
+  const nextBanner = () => { sfx.click(); setBannerIdx((i) => (i + 1) % BANNERS.length); };
+
   useEffect(() => {
     const t = setInterval(() => setBannerIdx((i) => (i + 1) % BANNERS.length), 5000);
     return () => clearInterval(t);
@@ -303,35 +306,49 @@ export default function Menu({ go }) {
 
         {/* banner event */}
         <GoldPanel
-          as="button"
-          onClick={() => go2(banner.id)}
           bg={banner.tone}
-          className="hidden h-[52px] w-[300px] shrink-0 items-center gap-3 overflow-hidden rounded-2xl px-3 text-left transition hover:brightness-110 active:scale-[0.98] lg:flex xl:w-[360px]"
+          className="hidden h-[52px] w-[300px] gap-x-2 shrink-0 items-center gap-1 overflow-hidden rounded-2xl px-1.5 lg:flex xl:w-[360px]"
         >
-          <AnimatePresence mode="wait">
-            <motion.span
-              key={banner.id}
-              initial={{ opacity: 0, x: 16 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -16 }}
-              transition={{ duration: 0.25 }}
-              className="flex min-w-0 flex-1 items-center gap-3"
-            >
-              <GoldIcon className="h-9 w-9">
-                <banner.icon size={18} />
-              </GoldIcon>
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-black leading-tight">{banner.title}</span>
-                <span className="block truncate text-[11px] font-semibold text-white/85">{banner.sub}</span>
-              </span>
-            </motion.span>
-          </AnimatePresence>
-          <span className={clsx(GOLD_TAG, 'shrink-0 px-3 py-1 text-xs')}>{banner.cta}</span>
-          <span className="absolute bottom-1 left-1/2 flex -translate-x-1/2 gap-1">
-            {BANNERS.map((b, i) => (
-              <span key={b.id} className={clsx('h-1 rounded-full transition-all', i === bannerIdx ? 'w-4 bg-yellow-200' : 'w-1.5 bg-white/45')} />
-            ))}
-          </span>
+          <button
+            onClick={prevBanner}
+            aria-label="Banner sebelumnya"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-yellow-200/60 bg-black/30 text-yellow-100 transition hover:bg-black/50 active:scale-90"
+          >
+            <ChevronLeft size={16} strokeWidth={3} />
+          </button>
+
+          <button
+            onClick={() => go2(banner.id)}
+            className="flex min-w-0 flex-1 items-center gap-2.5 text-left transition hover:brightness-110 active:scale-[0.98]"
+          >
+            <AnimatePresence mode="wait">
+              <motion.span
+                key={banner.id}
+                initial={{ opacity: 0, x: 16 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.25 }}
+                className="flex min-w-0 flex-1 items-center gap-2.5"
+              >
+                <GoldIcon className="h-9 w-9">
+                  <banner.icon size={18} />
+                </GoldIcon>
+                <span className="min-w-0">
+                  <span className="block truncate text-sm font-black leading-tight">{banner.title}</span>
+                  {/* <span className="block truncate text-[11px] font-semibold text-white/85">{banner.sub}</span> */}
+                </span>
+              </motion.span>
+            </AnimatePresence>
+            <span className={clsx(GOLD_TAG, 'shrink-0 px-3 py-1 text-xs')}>{banner.cta}</span>
+          </button>
+
+          <button
+            onClick={nextBanner}
+            aria-label="Banner berikutnya"
+            className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-yellow-200/60 bg-black/30 text-yellow-100 transition hover:bg-black/50 active:scale-90"
+          >
+            <ChevronRight size={16} strokeWidth={3} />
+          </button>
         </GoldPanel>
 
         {/* resource */}
