@@ -1,0 +1,158 @@
+import assert from 'node:assert/strict';
+import { registerCards } from '../src/engine/util.js';
+import { NEW_CARDS } from '../src/data/newCards.js';
+import { applyElementHit } from '../src/engine/reactions.js';
+import { resolveStrike, tickStatuses, applyTaunt } from '../src/engine/keywords.js';
+import { filterAttackTargets, swapSlots } from '../src/engine/lanes.js';
+import { evolve } from '../src/engine/evolution.js';
+import { gainCharge, canUltimate, useUltimate } from '../src/engine/charge.js';
+import { resolveSpell } from '../src/engine/spells.js';
+
+const REG = Object.fromEntries(NEW_CARDS.map((c) => [c.id, c]));
+registerCards(REG);
+
+const mon = (id, extra = {}) => ({ id, uid: id + Math.random(), hp: REG[id].hp, maxHp: REG[id].hp, pos: 'atk', equips: [], ...extra });
+const mk = (pm, em, extra = {}) => ({
+  turn: 3, active: 'player',
+  players: {
+    player: { lp: 20, mana: 5, maxMana: 5, deck: [{ id: 'bara_kecil', uid: 'd1' }, { id: 'bara_kecil', uid: 'd2' }], hand: [], monsters: pm, traps: [] },
+    enemy:  { lp: 20, mana: 5, maxMana: 5, deck: [], hand: [], monsters: em, traps: [] },
+  },
+  ...extra,
+});
+let n = 0;
+const t = (name, fn) => { fn(); n += 1; console.log('ok -', name); };
+
+t('reaksi Uap: api lalu air memukul semua monster lawan 2', () => {
+  let g = mk([null, null, null], [mon('embun_penjaga'), mon('duri_batu'), mon('ular_bisa')]);
+  g = applyElementHit(g, 'enemy', 1, 'api').g;
+  const r = applyElementHit(g, 'enemy', 1, 'air');
+  assert.equal(r.reaction.id, 'uap');
+  assert.equal(r.g.players.enemy.monsters[0].hp, 4);
+  assert.equal(r.g.players.enemy.monsters[2].hp, 2);
+});
+
+t('elemen sama tidak memicu reaksi, giliran berbeda juga tidak', () => {
+  let g = mk([], [mon('duri_batu'), null, null]);
+  g = applyElementHit(g, 'enemy', 0, 'api').g;
+  assert.equal(applyElementHit(g, 'enemy', 0, 'api').reaction, null);
+  assert.equal(applyElementHit(g, 'enemy', 0, 'air', 4).reaction, null);
+});
+
+t('Retak menghancurkan perisai dan +3 damage', () => {
+  let g = mk([], [mon('duri_batu', { shield: true }), null, null]);
+  g = applyElementHit(g, 'enemy', 0, 'es').g;
+  const r = applyElementHit(g, 'enemy', 0, 'api');
+  assert.equal(r.reaction.id, 'retak');
+  assert.equal(r.g.players.enemy.monsters[0].shield, false);
+  assert.equal(r.g.players.enemy.monsters[0].hp, 6);
+});
+
+t('Tembus melewati perisai; tanpa Tembus perisai menyerap', () => {
+  let g = mk([mon('ratu_magma')], [mon('embun_penjaga', { shield: true })]);
+  assert.equal(resolveStrike(g, 'player', 0, 'enemy', 0, 4).g.players.enemy.monsters[0].hp, 2);
+  g = mk([mon('ular_bisa')], [mon('embun_penjaga', { shield: true })]);
+  assert.equal(resolveStrike(g, 'player', 0, 'enemy', 0, 4).g.players.enemy.monsters[0].hp, 6);
+});
+
+t('Dinding menahan efek Tembus', () => {
+  const g = mk([mon('ratu_magma')], [mon('duri_batu', { shield: true })]);
+  const r = resolveStrike(g, 'player', 0, 'enemy', 0, 4);
+  assert.equal(r.g.players.enemy.monsters[0].hp, 9);
+});
+
+t('Sedot memulihkan, Racun menahan Sedot', () => {
+  let g = mk([mon('bara_besar', { hp: 3 })], [mon('embun_penjaga'), null, null]);
+  assert.equal(resolveStrike(g, 'player', 0, 'enemy', 0, 2).g.players.player.monsters[0].hp, 5);
+  g = mk([mon('bara_besar', { hp: 3, venom: 1 })], [mon('embun_penjaga'), null, null]);
+  assert.equal(resolveStrike(g, 'player', 0, 'enemy', 0, 2).g.players.player.monsters[0].hp, 3);
+});
+
+t('Duri memantul 2 damage ke penyerang', () => {
+  const g = mk([mon('ular_bisa')], [mon('duri_batu')]);
+  assert.equal(resolveStrike(g, 'player', 0, 'enemy', 0, 1).g.players.player.monsters[0].hp, 2);
+});
+
+t('Racun bertumpuk menggigit di awal giliran', () => {
+  let g = mk([mon('ular_bisa')], [mon('duri_batu')]);
+  g = resolveStrike(g, 'player', 0, 'enemy', 0, 1).g;
+  const hpBefore = g.players.enemy.monsters[0].hp;
+  g = tickStatuses(g, 'enemy').g;
+  assert.equal(g.players.enemy.monsters[0].hp, hpBefore - 1);
+});
+
+t('Bungkam mematikan keyword; Bangkit menyelamatkan sekali', () => {
+  const silenced = mk([], [mon('phoenix_abu', { silence: 1, hp: 1 }), null, null]);
+  assert.equal(resolveStrike(mk([mon('ular_bisa')], silenced.players.enemy.monsters.slice()), 'player', 0, 'enemy', 0, 5).g.players.enemy.monsters[0], null);
+  const g = mk([mon('ular_bisa')], [mon('phoenix_abu', { hp: 1 }), null, null]);
+  const r = resolveStrike(g, 'player', 0, 'enemy', 0, 5).g.players.enemy.monsters[0];
+  assert.equal(r.hp, 3);
+  assert.equal(r.revived, true);
+});
+
+t('Pancing memaksa target; Tembus mengabaikannya', () => {
+  const g = mk([mon('ular_bisa'), mon('ratu_magma')], [mon('duri_batu'), mon('embun_penjaga'), mon('ular_bisa')]);
+  assert.deepEqual(applyTaunt(g, 'enemy', g.players.player.monsters[0], [0, 1, 2]), [1]);
+  assert.deepEqual(applyTaunt(g, 'enemy', g.players.player.monsters[1], [0, 1, 2]), [0, 1, 2]);
+});
+
+t('Barisan: belakang aman selagi depan hidup, terbuka bila depan mati', () => {
+  const g = mk([mon('ular_bisa')], [mon('duri_batu'), mon('duri_batu'), mon('duri_batu')]);
+  assert.deepEqual(filterAttackTargets(g, 'enemy', g.players.player.monsters[0], [0, 1, 2]), [1]);
+  const g2 = mk([mon('ular_bisa')], [mon('duri_batu'), null, mon('duri_batu')]);
+  assert.deepEqual(filterAttackTargets(g2, 'enemy', g2.players.player.monsters[0], [0, 2]), [0, 2]);
+});
+
+t('Tukar posisi memakai energi, sekali per giliran', () => {
+  const g = mk([mon('ular_bisa'), null, mon('duri_batu')], []);
+  const r = swapSlots(g, 'player', 0, 1);
+  assert.equal(r.g.players.player.monsters[1].id, 'ular_bisa');
+  assert.equal(r.g.players.player.mana, 4);
+  assert.ok(swapSlots(r.g, 'player', 1, 2).error);
+});
+
+t('Evolusi mempertahankan kerusakan; tidak di giliran dipanggil', () => {
+  let g = mk([mon('bara_kecil', { hp: 1 })], [], { turn: 3 });
+  g.players.player.hand = [{ id: 'bara_besar', uid: 'h1' }];
+  const r = evolve(g, 'player', 0, 'h1');
+  assert.ok(!r.error);
+  const m = r.g.players.player.monsters[0];
+  assert.equal(m.id, 'bara_besar');
+  assert.equal(m.hp, 5);
+  assert.equal(r.g.players.player.hand.length, 0);
+  const g2 = mk([mon('bara_kecil', { summonedTurn: 3 })], []);
+  g2.players.player.hand = [{ id: 'bara_besar', uid: 'h1' }];
+  assert.ok(evolve(g2, 'player', 0, 'h1').error);
+});
+
+t('Ultimate butuh Charge penuh, sekali pakai, bisa dibungkam', () => {
+  let g = mk([mon('naga_sambar')], [mon('duri_batu'), mon('embun_penjaga'), null]);
+  assert.equal(canUltimate(g, 'player', 0).ok, false);
+  g = gainCharge(g, 'player', 0, 3);
+  assert.equal(canUltimate(g, 'player', 0).ok, true);
+  const r = useUltimate(g, 'player', 0);
+  assert.equal(r.g.players.enemy.monsters[0].hp, 6);
+  assert.equal(canUltimate(r.g, 'player', 0).ok, false);
+  const s = gainCharge(mk([mon('naga_sambar', { silence: 1 })], []), 'player', 0, 3);
+  assert.equal(canUltimate(s, 'player', 0).ok, false);
+});
+
+t('Letusan Magma memicu reaksi pada semua lawan', () => {
+  let g = mk([mon('ratu_magma')], [mon('duri_batu'), mon('embun_penjaga'), null]);
+  g = gainCharge(g, 'player', 0, 3);
+  const r = useUltimate(g, 'player', 0);
+  assert.equal(r.g.players.enemy.monsters[0].burn, 2);
+  assert.equal(r.g.players.enemy.monsters[1].burn, 2);
+});
+
+t('Sihir: Percikan lalu Siraman memicu Uap; Penawar membersihkan; Segel mematikan Bangkit', () => {
+  let g = mk([mon('ular_bisa', { venom: 3 })], [mon('duri_batu'), mon('embun_penjaga'), null]);
+  g = resolveSpell(g, 'player', 'percikan_api', 0, REG).g;
+  const r = resolveSpell(g, 'player', 'siram_air', 0, REG);
+  assert.ok(r.events.some((e) => e.type === 'reaction' && e.id === 'uap'));
+  assert.equal(resolveSpell(r.g, 'player', 'penawar', 0, REG).g.players.player.monsters[0].venom, 0);
+  const sealed = resolveSpell(mk([mon('ular_bisa')], [mon('phoenix_abu', { hp: 1 })]), 'player', 'segel_kuno', 0, REG).g;
+  assert.equal(resolveStrike(sealed, 'player', 0, 'enemy', 0, 5).g.players.enemy.monsters[0], null);
+});
+
+console.log(`\n${n} tes lulus`);

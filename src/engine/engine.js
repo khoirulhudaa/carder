@@ -2,6 +2,7 @@
 import { CARDS } from '../data/cards.js';
 import { elementMultiplier } from '../data/elements.js';
 import { START_LP, MAX_MANA, HAND_LIMIT, SLOTS, START_HAND } from './constants.js';
+import { createMechanics, extraFields, filterAttackTargets } from './integrasi.js';
 
 export const opp = (side) => (side === 'player' ? 'enemy' : 'player');
 const round10 = (n) => Math.round(n / 10) * 10;
@@ -70,12 +71,12 @@ export function statsOf(s, side, slot) {
   const d = CARDS[m.id];
   let atk = d.atk + m.bAtk + m.tAtk;
   let def = d.def + m.bDef;
-  const kw = new Set(d.kw);
+  const kw = new Set(m.silence > 0 ? [] : d.kw);
   for (const rid of m.equips) {
     const r = CARDS[rid];
     atk += r.atk || 0;
     def += r.def || 0;
-    (r.kw || []).forEach((k) => kw.add(k));
+    if (!(m.silence > 0)) (r.kw || []).forEach((k) => kw.add(k));
   }
   if (p.field) {
     const a = CARDS[p.field.id].aura;
@@ -136,7 +137,8 @@ function makeInst(s, id, pos = 'atk') {
     bAtk: 0, bDef: 0, tAtk: 0, equips: [],
     shield: d.kw.includes('shield'),
     stun: 0, frozen: false, burn: 0, burnDmg: 0,
-    sick: !d.kw.includes('haste'), acted: false,
+    sick: !d.kw.includes('haste') && !d.kw.includes('sergap'), acted: false,
+    ...extraFields(s.turn),
   };
 }
 
@@ -176,7 +178,11 @@ function damageMonster(s, side, slot, amount, o = {}) {
   emit(s, { type: 'dmg', side, slot, value: dmg, mult });
   res.dealt = Math.min(dmg, before);
   res.overflow = Math.max(0, dmg - before);
-  if (m.hp <= 0) {
+  if (m.hp <= 0 && d.kw.includes('bangkit') && !m.revived && !(m.silence > 0)) {
+    m.revived = true;
+    m.hp = Math.ceil(m.maxHp / 2);
+    emit(s, { type: 'heal', side, slot, value: m.hp });
+  } else if (m.hp <= 0) {
     res.killed = true;
     destroyMonster(s, side, slot);
   }
@@ -219,7 +225,10 @@ function applyOne(s, ctx, e) {
     case 'dmg':
       for (const t of targets) {
         if (t.player) damagePlayer(s, t.side, e.n);
-        else damageMonster(s, t.side, t.slot, e.n, { element: ctx.element });
+        else {
+          damageMonster(s, t.side, t.slot, e.n, { element: ctx.element });
+          mech.react(s, t.side, t.slot, ctx.element);
+        }
       }
       break;
     case 'heal':
@@ -369,6 +378,8 @@ function startTurn(s, side) {
   if (s.turn > 1) drawCards(s, side, 1);
   if (s.winner) return;
 
+  mech.onTurnStart(s, side);
+  if (s.winner) return;
   p.monsters.forEach((m) => {
     if (!m) return;
     m.sick = false;
@@ -399,6 +410,7 @@ function startTurn(s, side) {
 
 function endTurn(s, side) {
   s.players[side].monsters.forEach((m) => { if (m) m.tAtk = 0; });
+  mech.onTurnEnd(s, side);
   startTurn(s, opp(side));
 }
 
@@ -413,13 +425,19 @@ export function canPlayCard(s, side, uid) {
   const c = p.hand.find((x) => x.uid === uid);
   if (!c) return { ok: false, reason: 'Kartu tidak ada di tangan' };
   const d = CARDS[c.id];
+  if (d.evolvesFrom) return { ok: false, reason: 'Kartu evolusi: letakkan di atas monster asalnya' };
   if (d.cost > p.mana) return { ok: false, reason: 'Energi tidak cukup' };
   if (d.type === 'monster' && freeSlot(p.monsters) < 0) return { ok: false, reason: 'Zona monster penuh' };
   if (d.type === 'trap' && freeSlot(p.traps) < 0) return { ok: false, reason: 'Zona jebakan penuh' };
-  const need = d.type === 'relic' ? 'allyMonster' : d.type === 'spell' ? d.target : null;
+  const need = d.type === 'relic' ? 'allyMonster' : d.type === 'spell' ? spellTarget(d) : null;
   if (need === 'enemyMonster' && !e.monsters.some(Boolean)) return { ok: false, reason: 'Lawan tak punya monster' };
   if (need === 'allyMonster' && !p.monsters.some(Boolean)) return { ok: false, reason: 'Kamu tak punya monster' };
   return { ok: true, need };
+}
+
+function spellTarget(d) {
+  if (d.target || !d.effect) return d.target;
+  return d.effect.op === 'cleanse' ? 'allyMonster' : 'enemyMonster';
 }
 
 function actorReady(s, side, slot) {
@@ -448,7 +466,7 @@ export function attackTargets(s, side, slot) {
   const mons = s.players[eSide].monsters.map((m, i) => (m ? i : -1)).filter((i) => i >= 0);
   if (!mons.length) return ['direct'];
   const taunts = mons.filter((i) => statsOf(s, eSide, i).kw.includes('taunt'));
-  return taunts.length ? taunts : mons;
+  return filterAttackTargets(s, eSide, s.players[side].monsters[slot], taunts.length ? taunts : mons);
 }
 
 export function canSkill(s, side, slot) {
@@ -491,16 +509,20 @@ function doPlay(s, side, a) {
       runFx(s, { side, src: slot, element: d.element }, d.onSummon);
     }
   } else if (d.type === 'spell') {
-    const tside = d.target === 'allyMonster' ? side : eSide;
+    const need = spellTarget(d);
+    const tside = need === 'allyMonster' ? side : eSide;
     let T = null;
-    if (d.target) {
+    if (need) {
       if (!targetOk(tside, a.target)) { p.hand.splice(idx, 0, card); p.mana += d.cost; return; }
       T = { side: tside, slot: a.target };
     }
     log(s, `${s.names[side]} memainkan ${d.name}.`, side);
     const r = fireTrap(s, eSide, 'spell', {});
     if (r.negated) log(s, `${d.name} dibatalkan!`, side);
-    else if (!s.winner) runFx(s, { side, src: null, T, element: d.element }, d.fx);
+    else if (!s.winner) {
+      if (d.effect) mech.spell(s, side, d.id, a.target);
+      else runFx(s, { side, src: null, T, element: d.element }, d.fx);
+    }
     p.grave.push(card);
   } else if (d.type === 'relic') {
     if (!targetOk(side, a.target)) { p.hand.splice(idx, 0, card); p.mana += d.cost; return; }
@@ -564,7 +586,7 @@ function doAttack(s, side, slot, target) {
     emit(s, { type: 'dmg', side: eSide, slot: target, value: 0, mult: 1 });
     log(s, `${CARDS[t.id].name} menahan serangan sepenuhnya.`, eSide);
   }
-  const r = damageMonster(s, eSide, target, toTarget, {});
+  const r = mech.strike(s, side, slot, eSide, target, toTarget, A.element, elementMultiplier(A.element, T.element));
   if (A.kw.includes('lifesteal')) healPlayer(s, side, r.dealt);
   // kelebihan damage saat menghancurkan monster mengenai LP lawan (Tembus: penuh, lainnya: 50%)
   if (r.killed && r.overflow > 0 && t.pos === 'atk') damagePlayer(s, eSide, round10(r.overflow * (pierce ? 1 : 0.5)));
@@ -620,6 +642,11 @@ export function reduce(state, a, opts = {}) {
       log(s, `${CARDS[m.id].name} berpindah ke posisi ${m.pos === 'atk' ? 'Serang' : 'Bertahan'}.`, side);
       break;
     }
+    case 'SWAP':
+    case 'EVOLVE':
+    case 'ULTIMATE':
+      mech.doExtra(s, a);
+      break;
     case 'END_TURN':
       if (s.active === side) endTurn(s, side);
       break;
@@ -664,6 +691,10 @@ export function legalActions(s, side) {
       for (const t of attackTargets(s, side, slot)) acts.push({ type: 'ATTACK', side, slot, target: t });
     }
   });
+  acts.push(...mech.extraActions(s, side));
   acts.push({ type: 'END_TURN', side });
   return acts;
 }
+
+const mech = createMechanics({ emit, destroyMonster, actorReady });
+export const canUltimateNow = mech.checkUltimate;

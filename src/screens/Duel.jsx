@@ -1,6 +1,9 @@
 import clsx from 'clsx';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Flag, Hand, Layers, ScrollText, Swords, X } from 'lucide-react';
+import {
+  ArrowLeft, ArrowRight, ArrowUp, ChevronLeft, ChevronRight, Flag, Hand, Layers, PanelRightClose,
+  PanelRightOpen, ScrollText, Shield, Sparkles, Sword, Swords, X, Zap,
+} from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import Card from '../components/Card.jsx';
 import CutIns from '../components/CutIn.jsx';
@@ -17,9 +20,12 @@ import {
   canAttack,
   canPlayCard,
   canSkill,
+  canUltimateNow,
   createGame, reduce,
   statsOf, whyCannotAct,
 } from '../engine/engine.js';
+import { canEvolve } from '../engine/evolution.js';
+import { canSwap } from '../engine/lanes.js';
 import { explainAction, startEntries } from '../lib/explain.js';
 import { sfx } from '../lib/sfx.js';
 import { sfxx } from '../lib/sfxfx.js';
@@ -141,6 +147,10 @@ function InstanceInfo({ g, side, slot }) {
   if (m.burn > 0) flags.push(`Terbakar ${m.burnDmg}×${m.burn}`);
   if (m.sick) flags.push('Baru dipanggil');
   if (m.acted) flags.push('Sudah beraksi');
+  flags.push(`Charge ${m.charge || 0}/3`);
+  if (m.venom > 0) flags.push(`Racun ${m.venom}`);
+  if (m.silence > 0) flags.push('Dibungkam');
+  (m.marks || []).filter((k) => k.turn === g.turn).forEach((k) => flags.push(`Tanda ${k.el}`));
   m.equips.forEach((r) => flags.push(`Relik: ${CARDS[r].name}`));
   return (
     <div className="space-y-1 rounded-md border border-white/25 bg-black/35 p-2 text-xs">
@@ -154,11 +164,13 @@ function InstanceInfo({ g, side, slot }) {
   );
 }
 
-function Btn({ children, onClick, primary, danger, disabled, className }) {
+function Btn({ children, onClick, primary, danger, disabled, className, title }) {
   return (
     <button
       disabled={disabled}
       onClick={onClick}
+      title={title}
+      aria-label={title}
       className={clsx('btn w-full !px-2 text-center text-[13px] leading-tight', primary && 'btn-primary', danger && 'btn-danger', className)}
     >
       {children}
@@ -200,6 +212,8 @@ function countKills(prev, next) {
       if (!m) return;
       const n = nm[slot];
       if (n && n.id === m.id && (n.uid == null || n.uid === m.uid)) return;
+      if (m.uid != null && nm.some((x) => x?.uid === m.uid)) return; // pindah posisi
+      if (next.fx?.some((e) => e.type === 'evolve' && e.side === owner && e.slot === slot)) return;
       if (countIn(next.players[owner].hand, m.id) > countIn(prev.players[owner].hand, m.id)) return;
       const d = CARDS[m.id];
       if (!d || d.token) return;
@@ -300,6 +314,13 @@ export default function Duel({ config, onExit, onRematch }) {
   const mobileRef = useRef(isMobile);
   mobileRef.current = isMobile;
   const [showHand, setShowHand] = useState(false);
+  // sidebar kanan (desktop): pilihan disimpan agar tetap sama di duel berikutnya
+  const [showSide, setShowSide] = useState(() => {
+    try { return localStorage.getItem('duel:sidePanel') === '1'; } catch { return false; }
+  });
+  useEffect(() => {
+    try { localStorage.setItem('duel:sidePanel', showSide ? '1' : '0'); } catch { /* abaikan */ }
+  }, [showSide]);
 
   /* ---------- efek visual ---------- */
   const pushCut = useCallback((item) => {
@@ -346,6 +367,9 @@ export default function Duel({ config, onExit, onRematch }) {
             case 'skill': addFloat(key, e.name, '#c4b5fd'); sfxx.skill(CARDS[monId(e.side, e.slot)]?.element); pushCut({ kind: 'big', side: e.side, cardId: monId(e.side, e.slot), label: e.name }); break;
             case 'cast': if (!e.hidden) { setBanner({ id: Math.random(), cardId: e.id, side: e.side }); sfxx.cast(CARDS[e.id]?.element, CARDS[e.id]?.rarity); pushCut({ kind: 'peek', side: e.side, cardId: e.id }); } break;
             case 'trap': setBanner({ id: Math.random(), cardId: e.id, side: e.side, trap: true }); break;
+            case 'reaction': addFloat(key, e.name, '#f0abfc'); setFlashFor(key, 'buff'); sfx.buff(); break;
+            case 'evolve': addFloat(key, 'Evolusi!', '#fde047'); setFlashFor(key, 'summon'); sfx.buff(); pushCut({ kind: 'big', side: e.side, cardId: e.to, label: 'Evolusi!' }); break;
+            case 'swap': addFloat(`${e.side}:${e.a}`, '⇄', '#a5f3fc'); addFloat(`${e.side}:${e.b}`, '⇄', '#a5f3fc'); break;
             case 'draw': if (e.side === 'player') sfx.draw(); break;
             case 'turn': setBanner({ id: Math.random(), text: e.side === 'player' ? 'Giliranmu' : 'Giliran Lawan' }); sfx.turn(); break;
             default: break;
@@ -473,7 +497,7 @@ export default function Duel({ config, onExit, onRematch }) {
     stickLog();
     const t = setTimeout(stickLog, 60);
     return () => clearTimeout(t);
-  }, [detail.length, g.log.length, stickLog]);
+  }, [detail.length, g.log.length, showSide, stickLog]);
 
   /* ---------- turunan ---------- */
   const me = g.players.player;
@@ -528,7 +552,9 @@ export default function Duel({ config, onExit, onRematch }) {
   const startTarget = (kind, need, extra) => {
     sfx.click();
     const valid = [];
-    if (kind === 'attack') {
+    if (kind === 'evolve') {
+      [0, 1, 2].forEach((slot) => canEvolve(g, 'player', slot, extra.uid).ok && valid.push({ side: 'player', slot }));
+    } else if (kind === 'attack') {
       attackTargets(g, 'player', extra.slot).forEach((t) => t !== 'direct' && valid.push({ side: 'enemy', slot: t }));
     } else {
       const side = need === 'allyMonster' ? 'player' : 'enemy';
@@ -539,7 +565,8 @@ export default function Duel({ config, onExit, onRematch }) {
 
   const onTile = (side, slot) => {
     if (mode && mode.valid.some((v) => v.side === side && v.slot === slot)) {
-      if (mode.kind === 'play') act({ type: 'PLAY', side: 'player', uid: mode.uid, target: slot });
+      if (mode.kind === 'evolve') act({ type: 'EVOLVE', side: 'player', uid: mode.uid, slot });
+      else if (mode.kind === 'play') act({ type: 'PLAY', side: 'player', uid: mode.uid, target: slot });
       else if (mode.kind === 'skill') act({ type: 'SKILL', side: 'player', slot: mode.slot, target: slot });
       else if (mode.kind === 'attack') act({ type: 'ATTACK', side: 'player', slot: mode.slot, target: slot });
       return;
@@ -581,6 +608,12 @@ export default function Duel({ config, onExit, onRematch }) {
     }
     if (selInfo.kind === 'hand') {
       const d = CARDS[selInfo.cardId];
+      if (d.evolvesFrom) {
+        const checks = [0, 1, 2].map((s) => canEvolve(g, 'player', s, selInfo.card.uid));
+        if (checks.some((c) => c.ok)) return <Btn primary onClick={() => startTarget('evolve', null, { uid: selInfo.card.uid })}>Evolusi</Btn>;
+        const why = checks.find((c, i) => me.monsters[i]?.id === d.evolvesFrom)?.reason;
+        return <p className="text-xs font-bold text-yellow-300">{why || `Butuh ${CARDS[d.evolvesFrom]?.name} di arena`}</p>;
+      }
       const chk = canPlayCard(g, 'player', selInfo.card.uid);
       if (!chk.ok) return <p className="text-xs font-bold text-yellow-300">{chk.reason}</p>;
       if (d.type === 'monster') {
@@ -601,41 +634,83 @@ export default function Duel({ config, onExit, onRematch }) {
       const atkOk = canAttack(g, 'player', slot);
       const sc = d.skill ? canSkill(g, 'player', slot) : null;
       const targets = atkOk ? attackTargets(g, 'player', slot) : [];
+      const ult = d.ult ? canUltimateNow(g, 'player', slot) : null;
+      const icon = '!flex !min-w-0 flex-1 items-center justify-center !px-0 !py-2';
+      const direct = targets[0] === 'direct';
+      const toAtk = inst.pos !== 'atk';
       return (
-        <div className="grid grid-cols-2 gap-2">
-          {atkOk ? (
+        <div className="space-y-1.5">
+          <div className="flex items-stretch gap-1">
             <Btn
-              primary
+              primary={atkOk}
+              disabled={!atkOk}
+              className={icon}
+              title={direct ? 'Serang langsung' : 'Serang'}
               onClick={() => {
-                if (targets[0] === 'direct') act({ type: 'ATTACK', side: 'player', slot, target: 'direct' });
+                if (direct) act({ type: 'ATTACK', side: 'player', slot, target: 'direct' });
                 else if (targets.length === 1) act({ type: 'ATTACK', side: 'player', slot, target: targets[0] });
                 else startTarget('attack', 'enemyMonster', { slot });
               }}
             >
-              <Swords size={15} /> {targets[0] === 'direct' ? 'Serang Langsung!' : 'Serang'}
+              <Swords size={18} />
             </Btn>
-          ) : (
-            <p className="col-span-2 text-xs text-white/80">{attackReason(slot)}</p>
-          )}
-          {d.skill && (
+            {d.skill && (
+              <Btn
+                disabled={!sc.ok}
+                className={icon}
+                title={`Skill: ${d.skill.name} (${d.skill.cost} energi)`}
+                onClick={() => (sc.need ? startTarget('skill', sc.need, { slot }) : act({ type: 'SKILL', side: 'player', slot }))}
+              >
+                <Sparkles size={18} />
+              </Btn>
+            )}
+            {d.ult && (
+              <Btn
+                primary={ult.ok}
+                disabled={!ult.ok}
+                className={icon}
+                title={`Ultimate: ${d.ult.name}`}
+                onClick={() => act({ type: 'ULTIMATE', side: 'player', slot })}
+              >
+                <Zap size={18} />
+              </Btn>
+            )}
             <Btn
-              disabled={!sc.ok}
-              onClick={() => (sc.need ? startTarget('skill', sc.need, { slot }) : act({ type: 'SKILL', side: 'player', slot }))}
+              disabled={inst.acted}
+              className={icon}
+              title={toAtk ? 'Ganti ke serang' : 'Ganti ke bertahan'}
+              onClick={() => act({ type: 'TOGGLE', side: 'player', slot })}
             >
-              {d.skill.name} · {d.skill.cost} energi
+              {toAtk ? <Sword size={18} /> : <Shield size={18} />}
             </Btn>
-          )}
-          {d.skill && !sc.ok && <p className="col-span-2 text-[11px] text-white/80">Skill: {sc.reason}</p>}
-          <Btn className={atkOk === !!d.skill ? 'col-span-2' : ''} disabled={inst.acted} onClick={() => act({ type: 'TOGGLE', side: 'player', slot })}>
-            {inst.pos === 'atk' ? 'Ganti ke bertahan' : 'Ganti ke serang'}
-          </Btn>
+            {[0, 1, 2].filter((to) => to !== slot).map((to) => {
+              const Arrow = to === 1 ? ArrowUp : to === 0 ? ArrowLeft : ArrowRight;
+              return (
+                <Btn
+                  key={to}
+                  disabled={!canSwap(g, 'player', slot, to).ok}
+                  className={icon}
+                  title={`Tukar ke ${to === 1 ? 'depan' : to === 0 ? 'kiri' : 'kanan'} (1 energi)`}
+                  onClick={() => act({ type: 'SWAP', side: 'player', a: slot, b: to })}
+                >
+                  <Arrow size={18} />
+                </Btn>
+              );
+            })}
+          </div>
+          {!atkOk && <p className="text-[11px] text-white/80">Serang: {attackReason(slot)}</p>}
+          {d.skill && !sc.ok && <p className="text-[11px] text-white/80">Skill: {sc.reason}</p>}
+          {d.ult && !ult.ok && <p className="text-[11px] text-white/80">Ultimate: {ult.reason}</p>}
         </div>
       );
     }
     return null;
   }
 
-  const playable = myTurn ? me.hand.filter((c) => canPlayCard(g, 'player', c.uid).ok).length : 0;
+  const usable = (c) => (CARDS[c.id].evolvesFrom
+    ? [0, 1, 2].some((i) => canEvolve(g, 'player', i, c.uid).ok)
+    : canPlayCard(g, 'player', c.uid).ok);
+  const playable = myTurn ? me.hand.filter(usable).length : 0;
   const lines = shownId ? describeCard(CARDS[shownId]) : [];
 
   const statusText = mode
@@ -690,12 +765,18 @@ export default function Duel({ config, onExit, onRematch }) {
                   ))}
                 </div>
               )}
-              {CARDS[shownId].kw?.length > 0 && (
-                <ul className="space-y-1 text-[11px] leading-snug text-white/75">
-                  {CARDS[shownId].kw.map((k) => <li key={k}><b className="text-white">{KEYWORDS[k].name}</b>: {KEYWORDS[k].desc}</li>)}
-                </ul>
-              )}
-              {CARDS[shownId].flavor && <p className="text-[11px] italic leading-snug text-white/60">“{CARDS[shownId].flavor}”</p>}
+              {
+                CARDS[shownId].kw?.length > 0 && (
+                  <div className="space-y-1.5 rounded-md border border-white/25 bg-black/35 p-2.5 text-xs leading-snug">
+                    {CARDS[shownId].kw?.length > 0 && (
+                      <ul className="space-y-1 text-[11px] leading-snug text-white/75">
+                        {CARDS[shownId].kw.map((k) => <li key={k}><b className="text-white">{KEYWORDS[k]?.name ?? k}</b> <br /> {KEYWORDS[k]?.desc}</li>)}
+                      </ul>
+                    )}
+                  </div>
+                )
+              }
+              {/* {CARDS[shownId].flavor && <p className="text-[11px] italic leading-snug text-white/60">“{CARDS[shownId].flavor}”</p>} */}
             </>
           ) : (
             <p className="rounded-md border border-dashed border-white/30 p-4 text-center text-xs text-white/70">
@@ -738,6 +819,15 @@ export default function Duel({ config, onExit, onRematch }) {
               {statusText}
             </div>
             <button className="btn btn-sm !px-2 lg:hidden" onClick={() => setShowLog(true)} aria-label="Catatan"><ScrollText size={14} /></button>
+            <button
+              className="btn btn-sm !hidden !px-2 lg:!inline-flex"
+              onClick={() => { sfx.click(); setShowSide((v) => !v); }}
+              title={showSide ? 'Sembunyikan catatan duel' : 'Tampilkan catatan duel'}
+              aria-label={showSide ? 'Sembunyikan catatan duel' : 'Tampilkan catatan duel'}
+              aria-pressed={showSide}
+            >
+              {showSide ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />}
+            </button>
             <button className="btn btn-sm btn-danger !px-2" onClick={() => setConfirmQuit(true)} aria-label="Menyerah"><Flag size={14} /></button>
             <button
               className={clsx('tcg-endturn shrink-0', myTurn && !mode && 'is-ready')}
@@ -769,7 +859,7 @@ export default function Duel({ config, onExit, onRematch }) {
             <div className="flex min-w-0 flex-col items-center">
               <div data-hand-row className="flex w-max gap-2 px-3 sm:gap-3">
                 {visibleHand.map((c) => {
-                  const ok = myTurn && canPlayCard(g, 'player', c.uid).ok;
+                  const ok = myTurn && usable(c);
                   const on = sel?.kind === 'hand' && sel.uid === c.uid;
                   return (
                     <div
@@ -816,7 +906,7 @@ export default function Duel({ config, onExit, onRematch }) {
       </main>
 
       {/* panel kanan (desktop): rincian & catatan duel */}
-      <aside ref={rightRef} onClickCapture={() => requestAnimationFrame(stickLog)} className="relative z-[2] hidden w-64 shrink-0 flex-col overflow-hidden border-l-2 border-cyan-400/50 bg-[#0a1c4a]/90 p-3 lg:flex xl:w-72 [&_*]:!overflow-y-hidden [&_*]:![scrollbar-width:none] [&_*::-webkit-scrollbar]:hidden">
+      <aside ref={rightRef} onClickCapture={() => requestAnimationFrame(stickLog)} className={clsx('relative z-[2] hidden w-64 shrink-0 flex-col overflow-hidden border-l-2 border-cyan-400/50 bg-[#0a1c4a]/90 p-3 xl:w-72 [&_*]:!overflow-y-hidden [&_*]:![scrollbar-width:none] [&_*::-webkit-scrollbar]:hidden', showSide && 'lg:flex')}>
         <DuelLog g={g} detail={detail} className="flex-1" />
       </aside>
 
@@ -893,7 +983,7 @@ export default function Duel({ config, onExit, onRematch }) {
             <div className="min-h-0 flex-1 overflow-y-auto px-3 pb-2">
               <div className="grid grid-cols-2 justify-center gap-2.5 pt-1">
                 {me.hand.map((c) => {
-                  const ok = myTurn && canPlayCard(g, 'player', c.uid).ok;
+                  const ok = myTurn && usable(c);
                   const on = sel?.kind === 'hand' && sel.uid === c.uid;
                   return (
                     <Card
