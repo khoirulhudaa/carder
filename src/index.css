@@ -3,201 +3,268 @@
 @tailwind utilities;
 
 /* =====================================================================
-   TEMA "TCG LIVE": bar atas merah, papan duel merah (lawan) / biru (kamu),
-   panel biru berbingkai cyan, tombol hexagon, tombol Play hijau.
-   Semua class lama (.btn .panel .chip ...) dipertahankan agar JSX tetap jalan.
+   TEMA TERANG: dominan putih & abu-abu, aksen biru dan hijau.
+   Semua class lama (.btn .panel .chip .duel-* ...) dipertahankan.
    ===================================================================== */
 :root {
-  color-scheme: dark;
+  color-scheme: light;
   --font-ui: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  --red-1: #e0262f;      /* bar atas */
-  --red-2: #a9111a;
-  --red-3: #7d0a12;
-  --blue-1: #2f6bdc;     /* sisi pemain */
-  --blue-2: #1c47b0;
-  --blue-3: #0f2a73;
-  --navy: #0a2f63;       /* latar menu */
-  --navy-2: #0e4a8f;
-  --cyan: #28b4ee;       /* bingkai panel */
-  --cyan-2: #0b6fb4;
-  --yellow: #f2d94a;     /* bingkai kartu & highlight */
-  --green-1: #4fd062;
-  --green-2: #1f9a3a;
-  --paper: #eef1f5;
-  --ink: #0b1630;
+  /* netral */
+  --white: #ffffff;
+  --gray-50: #f6f8fb;
+  --gray-100: #eef1f6;
+  --gray-200: #e1e6ee;
+  --gray-300: #cbd3df;
+  --gray-400: #a3adbd;
+  --gray-500: #7b8698;
+  --gray-700: #3d4658;
+  --ink: #1b2433;
 
-  --bg: #0a2f63;
-  --line: rgba(255, 255, 255, 0.18);
-  --line-2: rgba(255, 255, 255, 0.35);
-  --accent: #f2d94a;
+  /* aksen */
+  --blue-1: #4f8df0;
+  --blue-2: #2f6fdc;
+  --blue-3: #1f55b8;
+  --green-1: #3fcf8e;
+  --green-2: #1fa56a;
+  --green-3: #13794c;
+  --teal: #2bb3a3;
+  --cyan: #38a9e8;
+
+  /* alias lama, supaya komponen yang memakainya ikut berubah */
+  --red-1: #dfe5ee;
+  --red-2: #cbd3df;
+  --red-3: #aab4c4;
+  --blue-1-legacy: #4f8df0;
+  --navy: #eef1f6;
+  --navy-2: #f6f8fb;
+  --cyan-2: #2f6fdc;
+  --yellow: #3fcf8e;
+  --paper: #ffffff;
+
+  --bg: #eef1f6;
+  --surface: #ffffff;
+  --surface-2: #f2f5f9;
+  --line: rgba(27, 36, 51, 0.10);
+  --line-2: rgba(27, 36, 51, 0.20);
+  --text: #1b2433;
+  --muted: #6b7587;
+  --accent: #2f6fdc;
+  --good: #1fa56a;
+  --bad: #e5484d;
+  --radius: 12px;
 }
 
 html, body, #root { height: 100%; }
 
 body {
   margin: 0;
-  color: #f4f7ff;
+  color: var(--ink);
   font-family: var(--font-ui);
   font-feature-settings: 'tnum', 'cv11';
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
   -webkit-tap-highlight-color: transparent;
-  background-color: var(--navy);
+  background-color: var(--gray-100);
   background-image:
-    radial-gradient(1100px 600px at 50% -10%, rgba(40, 180, 238, 0.45), transparent 70%),
-    linear-gradient(135deg, transparent 49.5%, rgba(255,255,255,.035) 50%, transparent 50.5%),
-    linear-gradient(45deg, transparent 49.5%, rgba(255,255,255,.035) 50%, transparent 50.5%),
-    linear-gradient(180deg, var(--navy-2), var(--navy) 70%);
-  background-size: auto, 56px 56px, 56px 56px, auto;
+    radial-gradient(1100px 600px at 50% -10%, rgba(79, 141, 240, 0.18), transparent 70%),
+    radial-gradient(900px 500px at 100% 100%, rgba(63, 207, 142, 0.12), transparent 70%),
+    linear-gradient(180deg, var(--gray-50), var(--gray-100) 70%);
   background-attachment: fixed;
 }
 
-* { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.4) transparent; }
+* { scrollbar-width: thin; scrollbar-color: rgba(27,36,51,.28) transparent; }
 
 @layer components {
-  /* ---------- tombol: kapsul biru kaca ---------- */
+  /* ---------- tombol: putih bersih, bingkai abu ---------- */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-bold tracking-tight text-white transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-300 active:translate-y-px disabled:pointer-events-none disabled:opacity-40;
-    border: 1px solid #7fd4ff;
-    background: linear-gradient(180deg, #3aa7ea 0%, #1b73c4 50%, #125aa3 100%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 2px 0 #0a3d73, 0 4px 8px rgba(0,0,0,.35);
-    text-shadow: 0 1px 0 rgba(0,0,0,.4);
+    @apply inline-flex items-center justify-center gap-2 rounded-md px-4 py-2 text-sm font-bold tracking-tight transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px disabled:pointer-events-none disabled:opacity-40;
+    color: var(--ink);
+    border: 1px solid var(--gray-300);
+    background: linear-gradient(180deg, #ffffff 0%, #f1f4f9 100%);
+    box-shadow: inset 0 1px 0 #fff, 0 1px 0 rgba(27,36,51,.06), 0 3px 8px rgba(27,36,51,.10);
+    text-shadow: none;
   }
-  .btn:hover { filter: brightness(1.12); }
+  .btn:hover { filter: none; background: linear-gradient(180deg, #ffffff 0%, #e8edf5 100%); border-color: var(--gray-400); }
+  .btn:focus-visible { outline-color: var(--blue-1); }
 
-  /* tombol utama = hijau seperti "Play!" */
+  /* tombol utama = hijau */
   .btn-primary {
-    @apply font-extrabold;
-    border-color: #b6ffc2;
-    background: linear-gradient(180deg, #62e275 0%, #2fb948 50%, #1f8f36 100%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.6), 0 2px 0 #0e5a1f, 0 4px 10px rgba(0,0,0,.4);
+    @apply font-extrabold text-white;
+    border-color: #7fe0b3;
+    background: linear-gradient(180deg, #46d99a 0%, #25b574 50%, #1a9560 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.55), 0 2px 0 #0f6b44, 0 4px 10px rgba(19,121,76,.3);
+    text-shadow: 0 1px 0 rgba(0,0,0,.25);
   }
+  .btn-primary:hover { background: linear-gradient(180deg, #55e3a8 0%, #2cc07e 50%, #1f9f66 100%); border-color: #9bebc6; }
+
+  /* tombol bahaya tetap kemerahan agar jelas */
   .btn-danger {
-    border-color: #ffb3b6;
-    background: linear-gradient(180deg, #f0545c 0%, #c8212b 50%, #9d141d 100%);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 2px 0 #5e0a10, 0 4px 8px rgba(0,0,0,.35);
+    @apply text-white;
+    border-color: #f4a6a9;
+    background: linear-gradient(180deg, #f0666c 0%, #dc3a42 50%, #b92830 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 2px 0 #7a1219, 0 4px 8px rgba(185,40,48,.28);
+    text-shadow: 0 1px 0 rgba(0,0,0,.25);
   }
   .btn-sm { @apply px-3 py-1.5 text-xs; }
 
-  /* ---------- panel: biru tua + bingkai cyan (modal Silver Tempest) ---------- */
+  /* ---------- panel: putih dengan bingkai biru muda ---------- */
   .panel {
     @apply rounded-lg;
-    background: linear-gradient(180deg, rgba(14,74,143,.96), rgba(8,40,92,.97));
+    color: var(--ink);
+    background: linear-gradient(180deg, #ffffff, #f3f6fb);
     border: 2px solid var(--cyan);
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.18), 0 8px 24px rgba(0,0,0,.45);
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.9), 0 10px 28px rgba(27,36,51,.22);
   }
 
-  /* ---------- chip = tab kuning-hijau miring ---------- */
+  /* ---------- chip = tab miring biru -> hijau saat aktif ---------- */
   .chip {
-    @apply inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold text-white transition;
-    border: 1px solid rgba(255,255,255,.4);
-    background: linear-gradient(180deg, #1f6fc0, #124785);
+    @apply inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold transition;
+    color: var(--ink);
+    border: 1px solid var(--gray-300);
+    background: linear-gradient(180deg, #ffffff, #e9eef6);
     clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
     padding-inline: 1rem;
     border-radius: 0;
   }
-  .chip:hover { filter: brightness(1.2); }
+  .chip:hover { filter: brightness(.97); }
   .chip-on {
-    color: #10260a;
-    background: linear-gradient(180deg, #f6ee7a, #9fdc45);
-    text-shadow: none;
+    color: #fff;
+    background: linear-gradient(180deg, #46d99a, #1fa56a);
+    text-shadow: 0 1px 0 rgba(0,0,0,.2);
   }
 
-  .eyebrow { @apply text-sm font-extrabold tracking-wide text-white; text-shadow: 0 1px 0 rgba(0,0,0,.5); }
+  .eyebrow { @apply text-sm font-extrabold tracking-wide; color: var(--ink); text-shadow: none; }
 
-  /* ---------- bar atas merah (menu, deck, toko) ---------- */
+  /* ---------- bar atas (menu, deck, toko): abu terang ---------- */
   .tcg-nav {
     @apply relative flex items-center gap-2 px-3;
     min-height: 48px;
-    background: linear-gradient(180deg, var(--red-1), var(--red-2));
-    border-bottom: 3px solid var(--red-3);
-    box-shadow: 0 3px 10px rgba(0,0,0,.45);
+    background: linear-gradient(180deg, #ffffff, #e6ebf3);
+    border-bottom: 3px solid var(--blue-1);
+    box-shadow: 0 3px 10px rgba(27,36,51,.15);
+    color: var(--ink);
   }
   .tcg-tab {
-    @apply px-4 py-2 text-sm font-extrabold uppercase tracking-wide text-white/80 transition hover:text-white;
+    @apply px-4 py-2 text-sm font-extrabold uppercase tracking-wide transition;
+    color: var(--gray-500);
     border-bottom: 3px solid transparent;
   }
-  .tcg-tab-on { @apply text-white; background: rgba(0,0,0,.22); border-bottom-color: #fff; }
+  .tcg-tab:hover { color: var(--ink); }
+  .tcg-tab-on { color: var(--blue-3); background: rgba(79,141,240,.12); border-bottom-color: var(--blue-2); }
   .tcg-currency {
-    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-extrabold text-white tabular-nums;
-    background: rgba(0,0,0,.45);
-    border: 1px solid rgba(255,255,255,.25);
+    @apply inline-flex items-center gap-1.5 rounded-full px-3 py-0.5 text-xs font-extrabold tabular-nums;
+    color: var(--ink);
+    background: rgba(255,255,255,.85);
+    border: 1px solid var(--gray-300);
   }
 
-  /* ---------- panel putih-abu seperti Card Library ---------- */
+  /* ---------- panel kertas ---------- */
   .tcg-paper {
     background: var(--paper);
     color: var(--ink);
-    border: 1px solid #c3cad6;
+    border: 1px solid var(--gray-300);
     box-shadow: inset 0 0 0 1px #fff;
   }
 
-  /* bingkai kartu kuning + lencana jumlah (Card Library) */
+  /* bingkai kartu: hijau-biru + lencana jumlah */
   .tcg-cardframe {
     @apply relative rounded-[6px] p-[3px];
-    background: linear-gradient(180deg, var(--yellow), #c9b32a);
-    box-shadow: 0 2px 4px rgba(0,0,0,.4);
+    background: linear-gradient(180deg, #5fe0ad, #2f8fe0);
+    box-shadow: 0 2px 6px rgba(27,36,51,.3);
   }
-  .tcg-cardframe.is-dim { filter: grayscale(.85) brightness(.55); }
+  .tcg-cardframe.is-dim { filter: grayscale(.85) brightness(.7); }
   .tcg-count {
     @apply absolute -bottom-2 left-1/2 z-10 flex h-5 min-w-[22px] -translate-x-1/2 items-center justify-center rounded-full px-1.5 text-[11px] font-extrabold tabular-nums;
-    background: #fff; color: var(--ink); border: 1px solid #98a2b3;
+    background: #fff; color: var(--ink); border: 1px solid var(--gray-400);
   }
 
-  /* ---------- hexagon (avatar pemain, kartu lawan, End Turn) ---------- */
+  /* ---------- hexagon ---------- */
   .tcg-hex {
     clip-path: polygon(14% 0, 86% 0, 100% 50%, 86% 100%, 14% 100%, 0 50%);
   }
   .tcg-hex-tag {
-    @apply flex items-center gap-2 px-6 py-1.5 font-extrabold text-white;
+    @apply flex items-center gap-2 px-6 py-1.5 font-extrabold;
+    color: var(--ink);
     clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 50%, calc(100% - 22px) 100%, 0 100%);
   }
-  /* label pemain & giliran: kaca putih transparan (tidak lagi merah/biru) */
-.tcg-hex-tag.is-me,
-.tcg-hex-tag.is-foe {
-  background: linear-gradient(90deg, rgba(255,255,255,.34), rgba(255,255,255,.14));
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  text-shadow: 0 1px 2px rgba(0,0,0,.45);
-}
+  /* label pemain: kamu = biru, lawan = hijau (pastel, kontras dengan teks gelap) */
+  .tcg-hex-tag.is-me {
+    background: linear-gradient(90deg, rgba(120,175,255,.95), rgba(190,215,255,.85));
+    text-shadow: none;
+  }
+  .tcg-hex-tag.is-foe {
+    background: linear-gradient(90deg, rgba(110,220,170,.95), rgba(190,240,215,.85));
+    text-shadow: none;
+  }
 
-.tcg-endturn {
+  .tcg-endturn {
     @apply flex h-[74px] w-[86px] items-center justify-center text-center text-[15px] font-black uppercase leading-[1.05] tracking-wide transition active:scale-95 disabled:opacity-40;
     clip-path: polygon(25% 0, 75% 0, 100% 50%, 75% 100%, 25% 100%, 0 50%);
-    color: #0b1630;
+    color: var(--ink);
     background: linear-gradient(180deg, #ffffff, #cfd6e2);
-    filter: drop-shadow(0 3px 0 rgba(0,0,0,.45));
+    filter: drop-shadow(0 3px 0 rgba(27,36,51,.3));
   }
-  .tcg-endturn.is-ready { background: linear-gradient(180deg, #fffbd0, var(--yellow)); animation: pulseTurn 1.4s ease-in-out infinite; }
-  @keyframes pulseTurn { 50% { filter: drop-shadow(0 0 12px rgba(242,217,74,.95)) drop-shadow(0 3px 0 rgba(0,0,0,.45)); } }
+  .tcg-endturn.is-ready { color: #fff; background: linear-gradient(180deg, #5be3a8, #1fa56a); animation: pulseTurn 1.4s ease-in-out infinite; }
+  @keyframes pulseTurn { 50% { filter: drop-shadow(0 0 12px rgba(63,207,142,.95)) drop-shadow(0 3px 0 rgba(27,36,51,.3)); } }
 
-  /* tombol Play! besar hijau (Trainer Challenge) */
+  /* tombol Play! besar */
   .tcg-play {
     @apply flex w-full max-w-sm items-center justify-center gap-2 py-3 text-2xl font-black text-white transition active:translate-y-px disabled:opacity-40;
     clip-path: polygon(4% 0, 96% 0, 100% 50%, 96% 100%, 4% 100%, 0 50%);
-    background: linear-gradient(180deg, #67e67a, #2bb143 55%, #1a8a33);
-    text-shadow: 0 2px 0 rgba(0,0,0,.45);
-    filter: drop-shadow(0 3px 0 #0b4a1a);
+    background: linear-gradient(180deg, #55e3a8, #25b574 55%, #178a58);
+    text-shadow: 0 2px 0 rgba(0,0,0,.3);
+    filter: drop-shadow(0 3px 0 #0c5233);
   }
-  .tcg-play:hover { filter: brightness(1.1) drop-shadow(0 3px 0 #0b4a1a); }
+  .tcg-play:hover { filter: brightness(1.08) drop-shadow(0 3px 0 #0c5233); }
 
-  /* dropdown kuning-hijau ("City Championship", "All Decks") */
+  /* dropdown */
   .tcg-select {
     @apply px-6 py-1.5 text-sm font-extrabold text-white;
     clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 10px 100%, 0 50%);
-    background: linear-gradient(180deg, #3cb44e, #1f7e32);
+    background: linear-gradient(180deg, #4f8df0, #2f6fdc);
   }
 
-  /* strip pilihan lawan / deck */
+  /* strip pilihan lawan / deck: abu terang */
   .tcg-strip {
     @apply rounded-md p-2;
-    background: rgba(5, 30, 70, .75);
-    border: 1px solid rgba(255,255,255,.2);
-    box-shadow: inset 0 0 14px rgba(0,0,0,.5);
+    color: var(--ink);
+    background: rgba(255, 255, 255, .78);
+    border: 1px solid var(--gray-300);
+    box-shadow: inset 0 0 10px rgba(27,36,51,.06);
   }
   .tcg-item { @apply relative transition; }
-  .tcg-item.is-on { outline: 3px solid var(--yellow); outline-offset: 1px; box-shadow: 0 0 16px rgba(242,217,74,.7); }
+  .tcg-item.is-on { outline: 3px solid var(--blue-1); outline-offset: 1px; box-shadow: 0 0 16px rgba(79,141,240,.55); }
+
+  /* ===== blok ui-* dari tema modern, disesuaikan ke palet terang ===== */
+  .ui-panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); }
+  .ui-panel-2 { background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--radius); }
+
+  .ui-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: .5rem;
+    padding: .55rem 1rem; border-radius: 10px;
+    background: var(--surface); color: var(--text);
+    border: 1px solid var(--gray-300);
+    font-weight: 500; font-size: .875rem; letter-spacing: -.005em;
+    transition: background .15s, border-color .15s, transform .1s;
+  }
+  .ui-btn:hover { background: var(--gray-100); border-color: var(--gray-400); }
+  .ui-btn:active { transform: translateY(1px); }
+  .ui-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ui-btn:disabled { opacity: .4; pointer-events: none; }
+  .ui-btn-primary { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
+  .ui-btn-primary:hover { background: #4a86ec; }
+
+  .ui-chip {
+    display: inline-flex; align-items: center; gap: .35rem;
+    padding: .15rem .55rem; border-radius: 999px;
+    border: 1px solid var(--gray-300); color: var(--muted); font-size: .75rem;
+  }
+  .ui-title { font-weight: 600; letter-spacing: -.02em; color: var(--ink); }
+  .ui-muted { color: var(--muted); }
+
+  .ui-bar { height: 4px; border-radius: 99px; background: rgba(27,36,51,.12); overflow: hidden; }
+  .ui-bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--blue-1), var(--green-1)); border-radius: inherit; transition: width .3s; }
 }
 
 /* bobot huruf */
@@ -211,30 +278,29 @@ body {
 @keyframes popIn { 0%{transform:scale(.7);opacity:0} 100%{transform:scale(1);opacity:1} }
 @keyframes swirl { to { transform: rotate(360deg); } }
 
-.fx-dmg { animation: shake .4s; box-shadow: 0 0 0 2px rgba(255,90,90,.95), 0 0 16px rgba(255,90,90,.6) !important; }
-.fx-heal { box-shadow: 0 0 0 2px rgba(74,222,128,.95), 0 0 16px rgba(74,222,128,.5) !important; }
-.fx-buff { box-shadow: 0 0 0 2px rgba(255,235,120,.95), 0 0 16px rgba(255,235,120,.55) !important; }
+.fx-dmg { animation: shake .4s; box-shadow: 0 0 0 2px rgba(229,72,77,.95), 0 0 16px rgba(229,72,77,.55) !important; }
+.fx-heal { box-shadow: 0 0 0 2px rgba(31,165,106,.95), 0 0 16px rgba(31,165,106,.45) !important; }
+.fx-buff { box-shadow: 0 0 0 2px rgba(79,141,240,.95), 0 0 16px rgba(79,141,240,.5) !important; }
 .fx-summon { animation: popIn .3s ease-out; }
 
 .holo::after {
   content: ''; position: absolute; inset: 0; pointer-events: none;
-  background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.25) 40%, rgba(255,190,255,.18) 50%, rgba(160,230,255,.18) 58%, transparent 70%);
+  background: linear-gradient(115deg, transparent 20%, rgba(255,255,255,.35) 40%, rgba(190,255,225,.25) 50%, rgba(160,205,255,.25) 58%, transparent 70%);
   background-size: 250% 250%; mix-blend-mode: overlay; animation: holo 3.5s linear infinite;
 }
 
 /* =====================================================================
-   PAPAN DUEL: setengah atas merah (lawan), setengah bawah biru (kamu),
-   di tengah lorong ungu-gelap berputar. Dipasang pada <main class="duel-main">.
+   PAPAN DUEL: terang. Lawan = abu kehijauan, kamu = abu kebiruan.
    ===================================================================== */
 .duel-root {
-  background: #0a0f3a;
+  background: #e9eef5;
 }
 .duel-root::before {
   content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
   background:
-    repeating-radial-gradient(circle at 50% 50%, rgba(80,70,255,.55) 0 3px, transparent 3px 46px),
-    radial-gradient(circle at 50% 50%, #000 0 22%, #16126b 60%, #3a2aa8 100%);
-  opacity: .9;
+    repeating-radial-gradient(circle at 50% 50%, rgba(79,141,240,.14) 0 2px, transparent 2px 46px),
+    radial-gradient(circle at 50% 50%, #ffffff 0 20%, #e6edf6 62%, #cfdbea 100%);
+  opacity: 1;
 }
 .duel-main {
   --u: clamp(7px, min(calc((100dvh - 300px) / 35), calc((100vw - 56px) / 28)), 18px);
@@ -246,30 +312,136 @@ body {
 @media (min-width: 1280px) {
   .duel-main { --u: clamp(7px, min(calc((100dvh - 290px) / 33), calc((100vw - 700px) / 28)), 22px); }
 }
-/* zona lawan & zona pemain: kaca putih transparan, lurus (tanpa lengkungan) */
+
 .duel-zone {
   @apply relative flex flex-col items-center justify-evenly gap-1 px-2 py-2;
 }
 .duel-zone.is-foe,
 .duel-zone.is-me {
-  background: linear-gradient(180deg, rgba(255,255,255,.24), rgba(255,255,255,.10));
-  -webkit-backdrop-filter: blur(14px) saturate(1.3);
-  backdrop-filter: blur(14px) saturate(1.3);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
   border-radius: 0;
   border: 0;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), inset 0 -1px 0 rgba(255,255,255,.2);
 }
-.duel-zone.is-foe { border-bottom: 1px solid rgba(255,255,255,.35); }
-.duel-zone.is-me { border-top: 1px solid rgba(255,255,255,.35); }
-/* alas kotak kartu (tempat monster): kaca lebih terang */
+.duel-zone.is-foe {
+  background: linear-gradient(180deg, rgba(63,207,142,.22), rgba(255,255,255,.55));
+  border-bottom: 1px solid rgba(31,165,106,.35);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.8);
+}
+.duel-zone.is-me {
+  background: linear-gradient(180deg, rgba(255,255,255,.55), rgba(79,141,240,.22));
+  border-top: 1px solid rgba(47,111,220,.35);
+  box-shadow: inset 0 -1px 0 rgba(255,255,255,.8);
+}
+/* alas kotak kartu (tempat monster) */
 .duel-lane {
-  background: rgba(255, 255, 255, .12);
-  border: 1px solid rgba(255,255,255,.4);
+  background: rgba(255, 255, 255, .6);
+  border: 1px solid var(--gray-300);
   border-radius: 8px;
-  box-shadow: inset 0 0 12px rgba(255,255,255,.12);
+  box-shadow: inset 0 0 10px rgba(27,36,51,.06);
 }
-/* garis kuning pemisah di sekitar kartu aktif */
-.duel-rule { height: 6px; border-radius: 6px; background: linear-gradient(90deg, #b8a520, #ece15a, #b8a520); }
+.duel-rule { height: 6px; border-radius: 6px; background: linear-gradient(90deg, #4f8df0, #3fcf8e, #4f8df0); }
 
 .u-size { font-size: var(--u, 12px); }
 .no-select { user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+
+/* =====================================================================
+   KOMPONEN GELAP di atas latar terang
+   Palet: arang #141922 / #1b2230, garis abu, aksen biru #4f8df0 & hijau #3fcf8e
+   ===================================================================== */
+:root {
+  --dk-1: #10141c;
+  --dk-2: #171d28;
+  --dk-3: #1f2735;
+  --dk-line: rgba(255, 255, 255, .12);
+  --dk-line-2: rgba(255, 255, 255, .22);
+  --dk-text: #eef2f8;
+  --dk-muted: #93a0b5;
+}
+
+/* ---------- tombol ---------- */
+.btn {
+  color: var(--dk-text);
+  border: 1px solid var(--dk-line-2);
+  background: linear-gradient(180deg, #2a3446 0%, #1c2432 100%);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 2px 0 #0a0d13, 0 4px 10px rgba(16,20,28,.35);
+  text-shadow: none;
+}
+.btn:hover { background: linear-gradient(180deg, #34415a 0%, #232d40 100%); border-color: #4f8df0; }
+.btn:focus-visible { outline-color: #3fcf8e; }
+
+/* ---------- panel & modal ---------- */
+.panel {
+  color: var(--dk-text);
+  background: linear-gradient(180deg, var(--dk-3), var(--dk-1));
+  border: 2px solid #2f6fdc;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.08), 0 12px 32px rgba(10,13,19,.55);
+}
+
+/* ---------- chip ---------- */
+.chip {
+  color: var(--dk-text);
+  border: 1px solid var(--dk-line-2);
+  background: linear-gradient(180deg, #2a3446, #1a2130);
+}
+.chip-on { color: #fff; background: linear-gradient(180deg, #46d99a, #1a9560); }
+
+/* ---------- bar atas, tab, mata uang ---------- */
+.tcg-nav {
+  color: var(--dk-text);
+  background: linear-gradient(180deg, var(--dk-3), var(--dk-1));
+  border-bottom: 3px solid #3fcf8e;
+  box-shadow: 0 3px 12px rgba(10,13,19,.4);
+}
+.tcg-tab { color: var(--dk-muted); }
+.tcg-tab:hover { color: #fff; }
+.tcg-tab-on { color: #fff; background: rgba(79,141,240,.22); border-bottom-color: #4f8df0; }
+.tcg-currency { color: var(--dk-text); background: rgba(0,0,0,.4); border: 1px solid var(--dk-line-2); }
+.eyebrow { color: var(--dk-text); }
+
+/* ---------- strip pilihan (lawan / deck) ---------- */
+.tcg-strip {
+  color: var(--dk-text);
+  background: rgba(16, 20, 28, .9);
+  border: 1px solid var(--dk-line);
+  box-shadow: inset 0 0 14px rgba(0,0,0,.45);
+}
+.tcg-item.is-on { outline-color: #3fcf8e; box-shadow: 0 0 16px rgba(63,207,142,.5); }
+
+/* ---------- label pemain (hexagon) ---------- */
+.tcg-hex-tag { color: #fff; }
+.tcg-hex-tag.is-me  { background: linear-gradient(90deg, #2f6fdc, #1b3f85); text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.tcg-hex-tag.is-foe { background: linear-gradient(90deg, #1fa56a, #135a3b); text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+
+/* ---------- tombol End Turn ---------- */
+.tcg-endturn { color: var(--dk-text); background: linear-gradient(180deg, #3a455a, #1c2432); filter: drop-shadow(0 3px 0 rgba(10,13,19,.6)); }
+.tcg-endturn.is-ready { color: #fff; background: linear-gradient(180deg, #5be3a8, #1fa56a); }
+
+/* ---------- SIDEBAR duel kiri & kanan ---------- */
+.duel-root > aside {
+  background: linear-gradient(180deg, var(--dk-2), var(--dk-1)) !important;
+  border-color: #2f6fdc !important;
+  color: var(--dk-text);
+  box-shadow: 0 0 24px rgba(10,13,19,.35);
+}
+.duel-root > aside .bg-black\/35,
+.duel-root > aside .bg-black\/30 {
+  background: rgba(255,255,255,.05) !important;
+  border-color: var(--dk-line) !important;
+}
+.duel-root > aside .border-white\/25,
+.duel-root > aside .border-white\/30 { border-color: var(--dk-line) !important; }
+
+/* ---------- dock aksi melayang ---------- */
+.duel-root [class*="bg-[#0a1c4a]"] {
+  background: rgba(16, 20, 28, .96) !important;
+  border-color: #3fcf8e !important;
+}
+
+/* ---------- bar HP/XP bawaan ---------- */
+.ui-panel, .ui-panel-2 { background: var(--dk-2); border-color: var(--dk-line); color: var(--dk-text); }
+.ui-btn { background: var(--dk-3); color: var(--dk-text); border-color: var(--dk-line-2); }
+.ui-btn:hover { background: #28324a; border-color: #4f8df0; }
+.ui-chip { color: var(--dk-muted); border-color: var(--dk-line-2); }
+.ui-title { color: #fff; }
+.ui-muted { color: var(--dk-muted); }
